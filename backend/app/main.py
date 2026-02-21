@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi import HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from app.database import create_db_and_tables
 from app.routers import auth, notebooks, diaries, proxy, assets, amap, users, timeline, stats, tags, share
 from app.config import settings
@@ -29,6 +30,15 @@ app = FastAPI(
     docs_url=None if is_prod else "/docs",
     redoc_url=None if is_prod else "/redoc",
     openapi_url=None if is_prod else "/openapi.json"
+)
+
+# CORS Configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for mobile app compatibility
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 if not os.path.exists("data/uploads"):

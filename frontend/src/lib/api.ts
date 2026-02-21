@@ -1,6 +1,20 @@
 import axios from 'axios'
 
-const api = axios.create({ baseURL: '/api' })
+const getBaseUrl = () => {
+  const storedUrl = localStorage.getItem('server_url')
+  if (storedUrl) {
+    // Ensure no trailing slash for consistency
+    return `${storedUrl.replace(/\/$/, '')}/api`
+  }
+  return '/api'
+}
+
+const api = axios.create({ baseURL: getBaseUrl() })
+
+export const updateApiBaseUrl = (url: string) => {
+  localStorage.setItem('server_url', url)
+  api.defaults.baseURL = getBaseUrl()
+}
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
