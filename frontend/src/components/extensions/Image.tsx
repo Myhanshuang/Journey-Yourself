@@ -21,9 +21,16 @@ export const Image = TiptapImage.extend({
   },
 
   renderHTML({ HTMLAttributes }) {
+    let src = HTMLAttributes.src
+    if (src && src.startsWith('/')) {
+      const serverUrl = localStorage.getItem('server_url')
+      if (serverUrl) {
+         src = `${serverUrl.replace(/\/$/, '')}${src}`
+      }
+    }
     return [
       'img',
-      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
+      mergeAttributes(this.options.HTMLAttributes, { ...HTMLAttributes, src }),
     ]
   },
 

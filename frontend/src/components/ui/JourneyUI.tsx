@@ -13,12 +13,14 @@ export { journeySpring, viewTransition } from '../../lib/constants'
 export { useToast, ToastContainer } from '../../hooks/useToast'
 export { useConfirm, GlobalConfirmModal } from '../../hooks/useConfirm'
 export { useAdjustedTime } from '../../hooks/useAdjustedTime'
+export { useIsMobile } from '../../hooks/useMobile'
 
 // Import for local use
 import { cn } from '../../lib/utils'
 import { journeySpring } from '../../lib/constants'
 import { getFirstImage, extractSnippet } from '../../lib/utils'
 import { useAdjustedTime } from '../../hooks/useAdjustedTime'
+import { useIsMobile } from '../../hooks/useMobile'
 import { useMotionValue, useTransform } from 'framer-motion'
 
 // --- Skeleton Component ---
@@ -30,8 +32,11 @@ export function Skeleton({ className }: { className?: string }) {
 export function DiaryItemCard({ diary, onClick, className, size = 'md', noHoverEffect = false }: any) {
   const bgImage = getFirstImage(diary.content)
   const { getAdjusted } = useAdjustedTime()
+  const isMobile = useIsMobile()
   const adjDate = getAdjusted(diary.date)
-  const sizes = { sm: "p-6", md: "p-8", lg: "p-12" }
+  const sizes = isMobile 
+    ? { sm: "p-4", md: "p-5", lg: "p-6" } 
+    : { sm: "p-6", md: "p-8", lg: "p-12" }
 
   return (
     <motion.div
@@ -49,13 +54,13 @@ export function DiaryItemCard({ diary, onClick, className, size = 'md', noHoverE
         </div>
       )}
       <div className="relative z-30 flex flex-col h-full text-[#232f55]">
-        <div className="flex items-center gap-6 mb-6">
-          <div className="w-14 h-14 bg-[#f2f4f2] rounded-[20px] flex flex-col items-center justify-center shadow-sm border border-white/50 flex-shrink-0 font-black">
+        <div className={cn("flex items-center mb-6", isMobile ? "gap-4" : "gap-6")}>
+          <div className={cn("bg-[#f2f4f2] rounded-[20px] flex flex-col items-center justify-center shadow-sm border border-white/50 flex-shrink-0 font-black", isMobile ? "w-12 h-12" : "w-14 h-14")}>
             <span className="text-[10px] text-[#232f55]/40 uppercase leading-none mb-1">{adjDate.toLocaleDateString('en', { month: 'short' })}</span>
-            <span className="text-2xl leading-none text-[#232f55]">{adjDate.getDate()}</span>
+            <span className={cn("leading-none text-[#232f55]", isMobile ? "text-xl" : "text-2xl")}>{adjDate.getDate()}</span>
           </div>
           <div className="flex-1 overflow-hidden">
-            <h4 className={cn("font-black truncate tracking-tighter leading-tight", size === 'lg' ? 'text-4xl' : 'text-2xl')}>{diary.title}</h4>
+            <h4 className={cn("font-black truncate tracking-tighter leading-tight", size === 'lg' ? (isMobile ? 'text-2xl' : 'text-4xl') : (isMobile ? 'text-lg' : 'text-2xl'))}>{diary.title}</h4>
             <div className="flex items-center gap-4 opacity-60 text-[11px] font-black uppercase tracking-widest text-[#6ebeea] mt-1.5">
               <span>{adjDate.getFullYear()}</span>
               <span className="w-1 h-1 rounded-full bg-[#6ebeea]/30" />
@@ -102,8 +107,9 @@ export function SidebarNavItem({ icon, label, active, onClick, collapsed }: any)
 }
 
 export function ActionButton({ children, onClick, className, icon: Icon, loading }: any) {
+  const isMobile = useIsMobile()
   return (
-    <motion.button whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.97 }} transition={journeySpring} onClick={onClick} disabled={loading} className={cn("px-10 py-5 bg-[#232f55] text-white rounded-[24px] font-black text-xs uppercase tracking-widest shadow-2xl shadow-[#232f55]/20 flex items-center justify-center gap-4 disabled:opacity-50", className)}>
+    <motion.button whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.97 }} transition={journeySpring} onClick={onClick} disabled={loading} className={cn("bg-[#232f55] text-white rounded-[24px] font-black text-xs uppercase tracking-widest shadow-2xl shadow-[#232f55]/20 flex items-center justify-center gap-4 disabled:opacity-50", isMobile ? "px-6 py-3.5" : "px-10 py-5", className)}>
       {loading ? <Loader2 size={18} className="animate-spin" /> : Icon && <Icon size={18} strokeWidth={3} />}
       {children}
     </motion.button>
@@ -120,7 +126,8 @@ export function OptionButton({ children, onClick, active, icon: Icon, className 
 }
 
 export function GlassHeader({ children, className }: any) {
-  return <header className={cn("h-14 px-16 flex items-center justify-between sticky top-0 z-20 bg-[#f2f4f2]/80 backdrop-blur-3xl", className)}>{children}</header>
+  const isMobile = useIsMobile()
+  return <header className={cn("flex items-center justify-between sticky top-0 z-20 bg-[#f2f4f2]/80 backdrop-blur-3xl", isMobile ? "h-14 px-6" : "h-14 px-16", className)}>{children}</header>
 }
 
 export function Card({ children, className, onClick, ...props }: any) {
@@ -138,6 +145,7 @@ export function Card({ children, className, onClick, ...props }: any) {
 }
 
 export function ServiceSetupModal({ type, onClose }: { type: 'immich' | 'geo', onClose: () => void }) {
+  const isMobile = useIsMobile()
   const config = {
     immich: {
       icon: <ImageIcon size={40} />,
@@ -153,7 +161,7 @@ export function ServiceSetupModal({ type, onClose }: { type: 'immich' | 'geo', o
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/20 backdrop-blur-md p-4">
-      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white p-10 rounded-[48px] max-w-sm w-full text-center shadow-2xl border border-white">
+      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className={cn("bg-white w-full text-center shadow-2xl border border-white", isMobile ? "p-6 rounded-[32px] max-w-xs" : "p-10 rounded-[48px] max-w-sm")}>
         <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-3xl mx-auto flex items-center justify-center mb-6">
           {config.icon}
         </div>

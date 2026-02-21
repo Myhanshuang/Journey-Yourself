@@ -3,7 +3,7 @@ import { ChevronLeft, Edit3, Trash2, Link2, Copy, Check, X } from 'lucide-react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom'
 import { diaryApi, notebookApi, shareApi } from '../lib/api'
-import { DiaryListItem, useToast, useConfirm, journeySpring } from '../components/ui/JourneyUI'
+import { DiaryListItem, useToast, useConfirm, journeySpring, cn, useIsMobile } from '../components/ui/JourneyUI'
 import { useState } from 'react'
 
 interface OutletContextType {
@@ -23,6 +23,7 @@ export default function NotebookDetailView() {
   const [showShareModal, setShowShareModal] = useState(false)
   const [shareLink, setShareLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const isMobile = useIsMobile()
 
   // Fetch notebook by ID
   const { data: notebook, isLoading: isLoadingNotebook } = useQuery({
@@ -112,7 +113,7 @@ export default function NotebookDetailView() {
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
       transition={journeySpring}
-      className="space-y-12 py-16 text-slate-900"
+      className={cn("space-y-12 text-slate-900", isMobile ? "py-6" : "py-16")}
     >
       <header className="flex items-center justify-between">
         <button onClick={handleBack} className="flex items-center gap-2 text-slate-400 hover:text-slate-900 font-bold transition-all"><ChevronLeft size={20} /> Library</button>
@@ -122,17 +123,17 @@ export default function NotebookDetailView() {
         </div>
       </header>
 
-      <div className="flex gap-12 items-end">
-        <div className="w-56 h-72 rounded-[40px] overflow-hidden shadow-2xl bg-slate-200">
+      <div className={cn("flex items-end", isMobile ? "flex-col items-center text-center gap-6" : "gap-12")}>
+        <div className={cn("rounded-[40px] overflow-hidden shadow-2xl bg-slate-200", isMobile ? "w-40 h-56" : "w-56 h-72")}>
           <img src={notebook.cover_url} className="w-full h-full object-cover" />
         </div>
-        <div className="pb-4 space-y-3 flex-1 text-slate-900">
-          <h2 className="text-6xl font-black tracking-tighter leading-none">{notebook.name}</h2>
-          <p className="text-2xl text-slate-400 font-medium leading-relaxed italic">{notebook.description || "The unwritten chapters."}</p>
+        <div className={cn("pb-4 space-y-3 flex-1 text-slate-900", isMobile ? "w-full" : "")}>
+          <h2 className={cn("font-black tracking-tighter leading-none", isMobile ? "text-4xl" : "text-6xl")}>{notebook.name}</h2>
+          <p className={cn("text-slate-400 font-medium leading-relaxed italic", isMobile ? "text-lg" : "text-2xl")}>{notebook.description || "The unwritten chapters."}</p>
         </div>
       </div>
 
-      <div className="space-y-6 pt-10 pb-32">
+      <div className={cn("space-y-6", isMobile ? "pt-6 pb-20" : "pt-10 pb-32")}>
         <h3 className="text-xs font-black uppercase tracking-[0.3em] text-slate-300 ml-4">Chronicles</h3>
         <AnimatePresence mode="popLayout">
           {diaries.length === 0 ? (
@@ -156,7 +157,7 @@ export default function NotebookDetailView() {
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-white p-10 rounded-[48px] max-w-lg w-full shadow-2xl border border-white"
+            className={cn("bg-white shadow-2xl border border-white", isMobile ? "p-6 rounded-[32px] w-full" : "p-10 rounded-[48px] max-w-lg w-full")}
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-8">

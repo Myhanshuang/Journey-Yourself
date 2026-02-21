@@ -13,7 +13,17 @@ export const getFirstImage = (content: any): string | null => {
   if (!content || !content.content) return null
   const walk = (nodes: any[]): string | null => {
     for (const node of nodes) {
-      if (node.type === 'image') return node.attrs?.src
+      if (node.type === 'image') {
+        let src = node.attrs?.src
+        if (src && src.startsWith('/')) {
+          const serverUrl = localStorage.getItem('server_url')
+          if (serverUrl) {
+             // Ensure no double slashes
+             src = `${serverUrl.replace(/\/$/, '')}${src}`
+          }
+        }
+        return src
+      }
       if (node.content) { const res = walk(node.content); if (res) return res }
     }
     return null

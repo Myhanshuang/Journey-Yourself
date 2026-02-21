@@ -11,7 +11,14 @@ if not os.path.exists(os.path.dirname(db_path)) and os.path.dirname(db_path):
     os.makedirs(os.path.dirname(db_path))
 
 connect_args = {"check_same_thread": False}
-engine = create_engine(sqlite_url, connect_args=connect_args)
+engine = create_engine(
+    sqlite_url, 
+    connect_args=connect_args,
+    pool_size=20,
+    max_overflow=10,
+    pool_timeout=30,
+    pool_recycle=1800
+)
 
 @event.listens_for(engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):

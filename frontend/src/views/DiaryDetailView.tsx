@@ -3,7 +3,7 @@ import {
   ChevronLeft, Edit3, Clock, RotateCw, Trash2, Tag,
   MapPin, Sun, Cloud, CloudRain, Wind, Snowflake, CloudLightning, Link2, Copy, Check, X
 } from 'lucide-react'
-import { useAdjustedTime, useConfirm, useToast, journeySpring } from '../components/ui/JourneyUI'
+import { useAdjustedTime, useConfirm, useToast, journeySpring, useIsMobile, cn } from '../components/ui/JourneyUI'
 import { diaryApi, shareApi } from '../lib/api'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
@@ -41,6 +41,7 @@ export default function DiaryDetailView() {
   const [showShareModal, setShowShareModal] = useState(false)
   const [shareLink, setShareLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const isMobile = useIsMobile()
 
   // Fetch diary by ID
   const { data: diary, isLoading, error } = useQuery({
@@ -70,7 +71,7 @@ export default function DiaryDetailView() {
     ],
     content: diary?.content,
     editorProps: {
-      attributes: { class: 'prose max-w-none pb-40 text-[#232f55] leading-[1.8] text-xl font-medium tracking-tight' }
+      attributes: { class: cn('prose max-w-none pb-40 text-[#232f55] leading-[1.8] font-medium tracking-tight', isMobile ? 'text-base' : 'text-xl') }
     },
   })
 
@@ -200,7 +201,7 @@ export default function DiaryDetailView() {
           )}
         </div>
 
-        <h1 className="text-6xl font-black tracking-tighter text-[#232f55] mb-8 leading-[1.1]">{diary.title}</h1>
+        <h1 className={cn("font-black tracking-tighter text-[#232f55] mb-8 leading-[1.1]", isMobile ? "text-4xl" : "text-6xl")}>{diary.title}</h1>
 
         {diary.tags && diary.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-8">
@@ -213,11 +214,11 @@ export default function DiaryDetailView() {
         )}
 
         <div className="flex flex-col gap-2 py-6 border-y border-[#232f55]/5 mb-10">
-          <div className="flex items-center gap-8 text-[#232f55]/40 font-bold text-[10px] uppercase tracking-[0.2em]">
+          <div className={cn("flex items-center gap-8 text-[#232f55]/40 font-bold text-[10px] uppercase tracking-[0.2em]", isMobile ? "flex-col items-start gap-2" : "")}>
             <span className="flex items-center gap-2.5 text-[#6ebeea]"><Clock size={14} /> Created: {adjCreated.toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-[#232f55]/10" />
+            <span className={cn("w-1.5 h-1.5 rounded-full bg-[#232f55]/10", isMobile && "hidden")} />
             <span className="flex items-center gap-2.5"><RotateCw size={14} /> Updated: {adjUpdated.toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-[#232f55]/10" />
+            <span className={cn("w-1.5 h-1.5 rounded-full bg-[#232f55]/10", isMobile && "hidden")} />
             <span className="text-[#232f55]/30 font-black">{diary.word_count || 0} Characters</span>
           </div>
         </div>
@@ -231,7 +232,7 @@ export default function DiaryDetailView() {
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-white p-10 rounded-[48px] max-w-lg w-full shadow-2xl border border-white"
+            className={cn("bg-white shadow-2xl border border-white", isMobile ? "p-6 rounded-[32px] w-full" : "p-10 rounded-[48px] max-w-lg w-full")}
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-8">

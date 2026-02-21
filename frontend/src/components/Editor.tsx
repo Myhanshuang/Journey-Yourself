@@ -24,7 +24,7 @@ import {
   Heading1, Heading2, Quote, Code, ListOrdered, MapPin, Smile, Cloud, Tag, Sun,
   Table as TableIcon, Sigma, ListChecks, Video as VideoIcon, Music, Upload
 } from 'lucide-react'
-import { cn, useToast, ServiceSetupModal } from './ui/JourneyUI'
+import { cn, useToast, ServiceSetupModal, useIsMobile } from './ui/JourneyUI'
 import { useQuery } from '@tanstack/react-query'
 import MoodPicker from './modals/MoodPicker'
 import LocationModal from './modals/LocationModal'
@@ -85,6 +85,7 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
   onCacheRestored
 }, ref) => {
   const { data: user } = useQuery({ queryKey: ['user', 'me'], queryFn: userApi.me })
+  const isMobile = useIsMobile()
   
   // 判断是编辑现有日记还是新建日记
   const isEditingExisting = !!initialData?.id
@@ -156,7 +157,7 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
     content: cacheToRestore?.content || initialData?.content || { type: 'doc', content: [{ type: 'paragraph' }] },
     onUpdate: ({ editor }) => setRealWordCount(countWordsCJK(editor.getText())),
     editorProps: { 
-      attributes: { class: 'prose max-w-none focus:outline-none min-h-[600px] pb-40 text-lg leading-relaxed text-[#232f55]' } 
+      attributes: { class: cn('prose max-w-none focus:outline-none min-h-[600px] pb-40 leading-relaxed text-[#232f55]', isMobile ? 'text-base' : 'text-lg') } 
     },
   })
 
@@ -402,7 +403,7 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="fixed inset-0 bg-[#f2f4f2] z-[200] flex flex-col overflow-hidden text-[#232f55] font-sans">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className={cn("fixed inset-0 bg-[#f2f4f2] z-[200] flex flex-col overflow-hidden text-[#232f55] font-sans", isMobile && "pt-[5vh]")}>
       <header className="h-16 md:h-20 border-b border-[#232f55]/5 px-4 md:px-8 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
         <div className="flex items-center gap-2 md:gap-4">
           <button onClick={onClose} className="p-2 md:p-3 hover:bg-slate-50 rounded-2xl transition-colors text-slate-400"><ArrowLeft size={20} /></button>
@@ -479,9 +480,9 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto pt-10 md:pt-20 px-4 md:px-0">
+      <div className={cn("flex-1 overflow-y-auto pt-10 px-4", isMobile ? "pt-6" : "md:pt-20 md:px-0")}>
         <div className="max-w-[840px] mx-auto pb-40 text-[#232f55]">
-           <input className="w-full bg-transparent border-none outline-none text-4xl md:text-7xl font-black tracking-tighter placeholder:text-[#232f55]/10 text-[#232f55] mb-8 md:mb-12" placeholder="Title..." value={title} onChange={e => setTitle(e.target.value)} />
+           <input className={cn("w-full bg-transparent border-none outline-none font-black tracking-tighter placeholder:text-[#232f55]/10 text-[#232f55] mb-8 md:mb-12", isMobile ? "text-4xl" : "text-4xl md:text-7xl")} placeholder="Title..." value={title} onChange={e => setTitle(e.target.value)} />
            <div className="h-px bg-[#232f55]/5 w-20 md:w-40 mb-10 md:mb-16" />
            <EditorContent editor={editor} />
         </div>
