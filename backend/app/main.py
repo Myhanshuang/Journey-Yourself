@@ -21,7 +21,15 @@ BACKUP_DIR = os.path.join(os.path.dirname(SQLITE_FILE_PATH), "backups")
 BACKUP_INTERVAL_HOURS = 1  # 备份间隔（小时）
 MAX_BACKUPS = 3  # 保留备份数量
 
-app = FastAPI(title="Journey Your Day API")
+# 环境检测：如果 PRODUCTION=TRUE (不区分大小写)，则禁用文档
+is_prod = os.getenv("PRODUCTION", "FALSE").upper() == "TRUE"
+
+app = FastAPI(
+    title="Journey Your Day API",
+    docs_url=None if is_prod else "/docs",
+    redoc_url=None if is_prod else "/redoc",
+    openapi_url=None if is_prod else "/openapi.json"
+)
 
 if not os.path.exists("data/uploads"):
     os.makedirs("data/uploads")
