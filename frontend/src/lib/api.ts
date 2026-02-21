@@ -80,6 +80,10 @@ export const timelineApi = {
   search: async (params: any) => (await api.get('/timeline/', { params })).data
 }
 
+export const searchApi = {
+  unified: async (params: any) => (await api.get('/search/unified', { params })).data
+}
+
 export const statsApi = {
   get: async (days: number = 30) => (await api.get('/stats/', { params: { days } })).data
 }
