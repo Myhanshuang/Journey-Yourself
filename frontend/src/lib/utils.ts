@@ -7,6 +7,20 @@ import { clsx, type ClassValue } from 'clsx'
 export const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs))
 
 /**
+ * Resolve asset URL (prepend server URL if relative and needed)
+ */
+export const getAssetUrl = (url: string | null | undefined): string | undefined => {
+  if (!url) return undefined
+  if (url.startsWith('/')) {
+    const serverUrl = localStorage.getItem('server_url')
+    if (serverUrl) {
+      return `${serverUrl.replace(/\/$/, '')}${url}`
+    }
+  }
+  return url
+}
+
+/**
  * 从 Tiptap 内容中提取第一张图片的 URL
  */
 export const getFirstImage = (content: any): string | null => {
@@ -14,15 +28,8 @@ export const getFirstImage = (content: any): string | null => {
   const walk = (nodes: any[]): string | null => {
     for (const node of nodes) {
       if (node.type === 'image') {
-        let src = node.attrs?.src
-        if (src && src.startsWith('/')) {
-          const serverUrl = localStorage.getItem('server_url')
-          if (serverUrl) {
-             // Ensure no double slashes
-             src = `${serverUrl.replace(/\/$/, '')}${src}`
-          }
-        }
-        return src
+        const src = node.attrs?.src
+        return getAssetUrl(src) || null
       }
       if (node.content) { const res = walk(node.content); if (res) return res }
     }

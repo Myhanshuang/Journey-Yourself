@@ -3,7 +3,7 @@ import { ChevronLeft, Edit3, Trash2, Link2, Copy, Check, X } from 'lucide-react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom'
 import { diaryApi, notebookApi, shareApi } from '../lib/api'
-import { DiaryListItem, useToast, useConfirm, journeySpring, cn, useIsMobile } from '../components/ui/JourneyUI'
+import { DiaryListItem, useToast, useConfirm, journeySpring, cn, useIsMobile, ActionMenu, getAssetUrl } from '../components/ui/JourneyUI'
 import { useState } from 'react'
 
 interface OutletContextType {
@@ -107,6 +107,11 @@ export default function NotebookDetailView() {
     )
   }
 
+  const actions = [
+    { label: 'Share Collection', icon: <Link2 size={18} />, onClick: handleShare },
+    { label: 'Edit Info', icon: <Edit3 size={18} />, onClick: handleEdit },
+  ]
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -117,15 +122,12 @@ export default function NotebookDetailView() {
     >
       <header className="flex items-center justify-between">
         <button onClick={handleBack} className="flex items-center gap-2 text-slate-400 hover:text-slate-900 font-bold transition-all"><ChevronLeft size={20} /> Library</button>
-        <div className="flex items-center gap-3">
-          <button onClick={handleShare} className="p-3 bg-white rounded-2xl border border-slate-100 shadow-sm text-slate-400 hover:text-[#6ebeea] transition-colors"><Link2 size={18} /></button>
-          <button onClick={handleEdit} className="p-3 bg-white rounded-2xl border border-slate-100 shadow-sm text-slate-400 hover:text-indigo-600 transition-colors"><Edit3 size={18} /></button>
-        </div>
+        <ActionMenu actions={actions} />
       </header>
 
       <div className={cn("flex items-end", isMobile ? "flex-col items-center text-center gap-6" : "gap-12")}>
         <div className={cn("rounded-[40px] overflow-hidden shadow-2xl bg-slate-200", isMobile ? "w-40 h-56" : "w-56 h-72")}>
-          <img src={notebook.cover_url} className="w-full h-full object-cover" />
+          <img src={getAssetUrl(notebook.cover_url)} className="w-full h-full object-cover" />
         </div>
         <div className={cn("pb-4 space-y-3 flex-1 text-slate-900", isMobile ? "w-full" : "")}>
           <h2 className={cn("font-black tracking-tighter leading-none", isMobile ? "text-4xl" : "text-6xl")}>{notebook.name}</h2>

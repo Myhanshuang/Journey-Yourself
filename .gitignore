@@ -14,3 +14,9 @@ backend/.venv/
 backend/.idea/
 *.pyc
 __pycache__/
+
+# Editor & OS
+.idea/
+.vscode/
+*.DS_Store
+*.log

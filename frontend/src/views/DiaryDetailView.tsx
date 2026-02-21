@@ -3,7 +3,7 @@ import {
   ChevronLeft, Edit3, Clock, RotateCw, Trash2, Tag,
   MapPin, Sun, Cloud, CloudRain, Wind, Snowflake, CloudLightning, Link2, Copy, Check, X
 } from 'lucide-react'
-import { useAdjustedTime, useConfirm, useToast, journeySpring, useIsMobile, cn } from '../components/ui/JourneyUI'
+import { useAdjustedTime, useConfirm, useToast, journeySpring, useIsMobile, cn, ActionMenu } from '../components/ui/JourneyUI'
 import { diaryApi, shareApi } from '../lib/api'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
@@ -160,6 +160,12 @@ export default function DiaryDetailView() {
   const adjUpdated = getAdjusted(diary.updated_at)
   const WIcon = diary.weather_snapshot ? (WEATHER_ICONS[diary.weather_snapshot.weather] || Cloud) : null
 
+  const actions = [
+    { label: 'Share', icon: <Link2 size={18} />, onClick: handleShare },
+    { label: 'Edit', icon: <Edit3 size={18} />, onClick: handleEdit },
+    { label: 'Delete', icon: <Trash2 size={18} />, onClick: handleDelete, variant: 'danger' as const },
+  ]
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -171,9 +177,7 @@ export default function DiaryDetailView() {
       <header className="flex items-center justify-between pt-2">
         <button onClick={handleBack} className="flex items-center gap-2 text-slate-400 hover:text-[#232f55] font-bold transition-all"><ChevronLeft size={20} /> Back</button>
         <div className="flex items-center gap-3">
-          <button onClick={handleShare} className="p-3 bg-white/50 rounded-2xl border border-white/50 shadow-sm text-slate-400 hover:text-[#6ebeea] transition-all hover:bg-[#6ebeea]/5"><Link2 size={18} /></button>
-          <button onClick={handleDelete} className="p-3 bg-white/50 rounded-2xl border border-white/50 shadow-sm text-slate-300 hover:text-rose-500 transition-all hover:bg-rose-50"><Trash2 size={18} /></button>
-          <button onClick={handleEdit} className="p-3 bg-white/50 rounded-2xl border border-white/50 shadow-sm text-slate-400 hover:text-[#6ebeea] transition-all hover:bg-[#6ebeea]/5"><Edit3 size={18} /></button>
+          <ActionMenu actions={actions} />
           <div className="h-10 w-px bg-[#232f55]/5 mx-2" />
           <div className="text-right">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-300">{adjCreated.toLocaleDateString('en', { weekday: 'long' })}</p>

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { Plus, Trash2, BookOpen } from 'lucide-react'
-import { Card, useAdjustedTime, useConfirm, useToast } from '../components/ui/JourneyUI'
+import { Card, useAdjustedTime, useConfirm, useToast, getAssetUrl } from '../components/ui/JourneyUI'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { notebookApi } from '../lib/api'
@@ -58,7 +58,7 @@ export default function NotebooksListView() {
             <Card key={nb.id} className="group relative" onClick={() => handleSelect(nb)}>
               <div className="aspect-[3/4] md:aspect-[4/5] overflow-hidden bg-slate-100">
                 {nb.cover_url ? (
-                  <img src={nb.cover_url} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+                  <img src={getAssetUrl(nb.cover_url)} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-slate-200"><BookOpen size={48} /></div>
                 )}
