@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  User, Lock, Database, Cloud, ChevronRight, Save, Download, Upload, LogOut, X, Info, CheckCircle2, AlertCircle, Globe, Clock, Plus, Minus, UserPlus, Shield, User as UserIcon, Link2, Bookmark
+  User, Lock, Database, Cloud, ChevronRight, Save, Download, Upload, LogOut, X, Info, CheckCircle2, AlertCircle, Globe, Clock, Plus, Minus, UserPlus, Shield, User as UserIcon, Link2, Bookmark, Sparkles
 } from 'lucide-react'
 import { cn, Card, useToast, useAdjustedTime } from '../components/ui/JourneyUI'
 import { userApi, karakeepApi } from '../lib/api'
@@ -12,7 +12,7 @@ export default function SettingsView() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data: user, isLoading } = useQuery({ queryKey: ['user', 'me'], queryFn: userApi.me })
-  const [activeModal, setActiveModal] = useState<'profile' | 'password' | 'immich' | 'karakeep' | 'geo' | 'system' | 'timezone' | 'timeoffset' | 'createuser' | null>(null)
+  const [activeModal, setActiveModal] = useState<'profile' | 'password' | 'immich' | 'karakeep' | 'ai' | 'geo' | 'system' | 'timezone' | 'timeoffset' | 'createuser' | null>(null)
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -54,6 +54,7 @@ export default function SettingsView() {
           <Card className="divide-y divide-slate-50 text-slate-900">
             <SettingsRow icon={<Cloud size={18} className={cn(user?.has_immich_key ? "text-emerald-500" : "text-indigo-500")} />} label="Immich Library" sub={user?.has_immich_key ? "Connected" : "Not Configured"} onClick={() => setActiveModal('immich')} />
             <SettingsRow icon={<Bookmark size={18} className={cn(user?.has_karakeep_key ? "text-emerald-500" : "text-pink-500")} />} label="Karakeep Bookmarks" sub={user?.has_karakeep_key ? "Connected" : "Not Configured"} onClick={() => setActiveModal('karakeep')} />
+            <SettingsRow icon={<Sparkles size={18} className={cn(user?.has_ai_key ? "text-emerald-500" : "text-purple-500")} />} label="AI Assistant" sub={user?.has_ai_key ? "Connected" : "Not Configured"} onClick={() => setActiveModal('ai')} />
             <SettingsRow icon={<Globe size={18} className={cn(user?.has_geo_key ? "text-emerald-500" : "text-indigo-500")} />} label="Geographic Service" sub={user?.has_geo_key ? "Configured" : "Not Configured"} onClick={() => setActiveModal('geo')} />
           </Card>
         </div>
@@ -76,6 +77,7 @@ export default function SettingsView() {
         {activeModal === 'password' && <PasswordModal onClose={() => setActiveModal(null)} />}
         {activeModal === 'immich' && <ImmichModal user={user} onClose={() => { setActiveModal(null); queryClient.invalidateQueries(); }} />}
         {activeModal === 'karakeep' && <KarakeepModal user={user} onClose={() => { setActiveModal(null); queryClient.invalidateQueries(); }} />}
+        {activeModal === 'ai' && <AIModal user={user} onClose={() => { setActiveModal(null); queryClient.invalidateQueries(); }} />}
         {activeModal === 'geo' && <GeoModal user={user} onClose={() => { setActiveModal(null); queryClient.invalidateQueries(); }} />}
         {activeModal === 'system' && <SystemModal onClose={() => setActiveModal(null)} />}
         {activeModal === 'timezone' && <TimezoneModal user={user} onClose={() => { setActiveModal(null); queryClient.invalidateQueries(); }} />}
@@ -83,6 +85,88 @@ export default function SettingsView() {
         {activeModal === 'createuser' && <CreateUserModal onClose={() => setActiveModal(null)} />}
       </AnimatePresence>
     </motion.div>
+  )
+}
+
+function AIModal({ user, onClose }: any) {
+  const [form, setForm] = useState({ 
+    provider: user?.ai_provider || 'openai', 
+    base_url: user?.ai_base_url || 'https://api.openai.com/v1', 
+    key: '', 
+    model: user?.ai_model || 'gpt-3.5-turbo' 
+  });
+  const addToast = useToast(state => state.add)
+  const mutation = useMutation({
+    mutationFn: userApi.updateAI,
+    onSuccess: () => {
+      addToast('success', 'AI Service Linked');
+      onClose();
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.detail || 'Verification failed. Check your config.'
+      addToast('error', msg)
+    }
+  })
+
+  return (
+    <ModalWrapper title="AI Assistant" onClose={onClose}>
+      <div className="space-y-4">
+        <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">Provider</label>
+            <div className="relative">
+                <select 
+                    className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700 appearance-none border-2 border-transparent focus:border-purple-100 transition-all cursor-pointer"
+                    value={form.provider}
+                    onChange={e => setForm({ ...form, provider: e.target.value })}
+                >
+                    <option value="openai">OpenAI</option>
+                    <option value="anthropic">Anthropic</option>
+                    <option value="ollama">Ollama (Local)</option>
+                    <option value="other">Other (OpenAI Compatible)</option>
+                </select>
+                <ChevronRight className="absolute right-6 top-1/2 -translate-y-1/2 rotate-90 text-slate-300 pointer-events-none" size={18} />
+            </div>
+        </div>
+        <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">Base URL</label>
+            <input 
+                className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700 focus:ring-2 focus:ring-purple-100 transition-all" 
+                placeholder="e.g. https://api.openai.com/v1" 
+                value={form.base_url} 
+                onChange={e => setForm({ ...form, base_url: e.target.value })} 
+            />
+        </div>
+        <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">API Key</label>
+            <input 
+                className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700 focus:ring-2 focus:ring-purple-100 transition-all" 
+                type="password" 
+                placeholder="Paste your API Key" 
+                value={form.key} 
+                onChange={e => setForm({ ...form, key: e.target.value })} 
+            />
+        </div>
+        <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">Model Name</label>
+            <input 
+                className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700 focus:ring-2 focus:ring-purple-100 transition-all" 
+                placeholder="e.g. gpt-4, claude-3-opus" 
+                value={form.model} 
+                onChange={e => setForm({ ...form, model: e.target.value })} 
+            />
+        </div>
+      </div>
+      <button 
+        onClick={() => {
+            if (!form.key) return addToast('error', 'API Key required')
+            mutation.mutate({ provider: form.provider, base_url: form.base_url, api_key: form.key, model: form.model })
+        }} 
+        disabled={mutation.isPending} 
+        className="w-full py-5 bg-purple-600 text-white rounded-[24px] font-black shadow-xl mt-8 disabled:opacity-50 text-xs uppercase tracking-widest active:scale-95 transition-all hover:bg-purple-700"
+      >
+        {mutation.isPending ? 'Verifying...' : 'Verify & Enable AI'}
+      </button>
+    </ModalWrapper>
   )
 }
 

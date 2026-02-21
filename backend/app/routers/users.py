@@ -33,6 +33,12 @@ class KarakeepUpdate(BaseModel):
     url: str
     api_key: str
 
+class AIUpdate(BaseModel):
+    provider: str
+    base_url: str
+    api_key: str
+    model: str
+
 class GeoUpdate(BaseModel):
     provider: str # amap
     api_key: str
@@ -68,6 +74,10 @@ async def read_user_me(current_user: User = Depends(get_current_user)):
         "has_immich_key": bool(current_user.immich_api_key),
         "karakeep_url": current_user.karakeep_url,
         "has_karakeep_key": bool(current_user.karakeep_api_key),
+        "ai_provider": current_user.ai_provider or "openai",
+        "ai_base_url": current_user.ai_base_url,
+        "ai_model": current_user.ai_model,
+        "has_ai_key": bool(current_user.ai_api_key),
         "geo_provider": current_user.geo_provider or "amap",
         "has_geo_key": bool(current_user.geo_api_key)
     }
@@ -147,6 +157,57 @@ async def update_karakeep(karakeep_in: KarakeepUpdate, current_user: User = Depe
             raise HTTPException(status_code=400, detail=f"Karakeep connection failed: {str(e)}")
         except Exception as e:
             print(f"DEBUG: Unexpected error during Karakeep verification: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+@router.patch("/me/ai")
+async def update_ai(ai_in: AIUpdate, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    base_url = ai_in.base_url.strip().rstrip("/") if ai_in.base_url else "https://api.openai.com/v1"
+    api_key = ai_in.api_key.strip()
+    provider = ai_in.provider.lower()
+    model = ai_in.model.strip()
+    
+    print(f"DEBUG: Verifying AI link for {current_user.username} with {provider} at {base_url}")
+    
+    # Generic verification: Try listing models if possible, or just accept if key is non-empty.
+    # OpenAI: GET /v1/models
+    # Most providers support /models or /v1/models
+    
+    headers = {"Authorization": f"Bearer {api_key}"}
+    if provider == "azure":
+        # Azure specific headers if needed, but for now assuming generic OpenAI compatible
+        pass
+
+    async with httpx.AsyncClient(verify=False) as client:
+        try:
+            # Try to list models to verify key
+            resp = await client.get(f"{base_url}/models", headers=headers, timeout=10.0)
+            if resp.status_code == 200:
+                print(f"DEBUG: AI verification successful")
+            elif resp.status_code == 404:
+                # Some proxies might not implement /models, fallback to trusting user
+                print(f"DEBUG: AI verification /models 404, proceeding anyway")
+            else:
+                 # If explicit 401/403, fail
+                 if resp.status_code in [401, 403]:
+                     raise HTTPException(status_code=400, detail=f"AI Authentication failed: {resp.status_code}")
+                 print(f"DEBUG: AI verification returned {resp.status_code}, might be ok")
+
+            current_user.ai_provider = provider
+            current_user.ai_base_url = base_url
+            current_user.ai_api_key = encrypt_data(api_key)
+            current_user.ai_model = model
+            session.add(current_user)
+            session.commit()
+            return {"status": "ok"}
+            
+        except httpx.RequestError as e:
+             # Allow saving even if offline? No, better verify.
+             # But if user is offline, maybe allow?
+             # For now, require verification.
+            print(f"DEBUG: AI connection error: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"AI connection failed: {str(e)}")
+        except Exception as e:
+            print(f"DEBUG: Unexpected error during AI verification: {str(e)}")
             raise HTTPException(status_code=500, detail=str(e))
 
 @router.patch("/me/geo")

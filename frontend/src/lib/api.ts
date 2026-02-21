@@ -106,6 +106,7 @@ export const userApi = {
   updatePassword: async (data: any) => (await api.patch('/users/me/password', data)).data,
   updateImmich: async (data: any) => (await api.patch('/users/me/immich', data)).data,
   updateKarakeep: async (data: any) => (await api.patch('/users/me/karakeep', data)).data,
+  updateAI: async (data: any) => (await api.patch('/users/me/ai', data)).data,
   updateGeo: async (data: any) => (await api.patch('/users/me/geo', data)).data,
   createUser: async (data: any) => (await api.post('/users/', data)).data,
   exportDb: async () => {

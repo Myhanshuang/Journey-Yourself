@@ -33,6 +33,11 @@ class User(SQLModel, table=True):
     karakeep_api_key: Optional[str] = None
     karakeep_config: Dict[str, Any] = Field(default_factory=lambda: {}, sa_column=Column(JSON))
     
+    ai_provider: Optional[str] = Field(default="openai")
+    ai_base_url: Optional[str] = None
+    ai_api_key: Optional[str] = None
+    ai_model: Optional[str] = Field(default="gpt-3.5-turbo")
+    
     geo_provider: Optional[str] = Field(default="amap") # amap
     geo_api_key: Optional[str] = None
     
