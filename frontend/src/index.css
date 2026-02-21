@@ -1,0 +1,230 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+}
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  font-family: "SF Pro Display", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f2f4f2;
+}
+
+body {
+  position: relative;
+  min-height: 100vh;
+}
+
+/* Subtle physical texture */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.012;
+  pointer-events: none;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(35, 47, 85, 0.08);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(35, 47, 85, 0.15);
+}
+
+input:focus, textarea:focus {
+  outline: none;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #edefed 25%, #f5f7f5 50%, #edefed 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+::selection {
+  background-color: rgba(110, 190, 234, 0.2);
+  color: #232f55;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: -0.03em;
+  color: #232f55;
+}
+
+/* Tiptap Typography Overrides */
+.prose {
+  @apply max-w-none;
+}
+
+.prose h1 {
+  @apply text-5xl font-black tracking-tighter mb-10 mt-16;
+}
+
+.prose h2 {
+  @apply text-3xl font-black tracking-tight mb-8 mt-12;
+}
+
+.prose p {
+  @apply leading-[1.8] mb-6 text-slate-700;
+}
+
+.prose ul:not([data-type="taskList"]) {
+  @apply list-disc pl-8 mb-6 space-y-3 text-slate-700;
+}
+
+.prose ol {
+  @apply list-decimal pl-8 mb-6 space-y-3 text-slate-700;
+}
+
+.prose blockquote {
+  @apply border-l-4 border-[#6ebeea]/40 pl-8 italic text-slate-500 my-10 py-3 bg-[#6ebeea]/5 rounded-r-2xl;
+}
+
+.prose code {
+  @apply bg-slate-100 px-2 py-1 rounded-lg text-[#232f55] font-mono text-[0.9em] border border-slate-200/50;
+}
+
+.prose pre {
+  @apply bg-[#232f55] text-slate-100 p-8 rounded-[32px] font-mono text-sm my-10 overflow-x-auto shadow-2xl;
+}
+
+.prose img {
+  @apply rounded-[40px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] my-16 border border-white/50 mx-auto;
+}
+
+/* Table Styles - Diary Premium Edition */
+.prose table {
+  @apply border-collapse table-auto w-full my-12 overflow-hidden rounded-[24px] shadow-sm border border-slate-200/60;
+}
+
+.prose td, .prose th {
+  @apply min-w-[1em] border border-slate-200/60 p-4 align-top relative;
+}
+
+.prose th {
+  @apply font-black text-[#232f55] text-sm uppercase tracking-widest bg-slate-50/80;
+}
+
+.prose tr:nth-child(even) {
+  @apply bg-slate-50/30;
+}
+
+/* Task List Styles */
+.prose ul[data-type="taskList"] {
+  @apply list-none p-0 my-8 space-y-4;
+}
+
+.prose ul[data-type="taskList"] li {
+  @apply flex items-start gap-4;
+}
+
+.prose ul[data-type="taskList"] input[type="checkbox"] {
+  @apply mt-1.5 cursor-pointer accent-[#6ebeea] w-5 h-5 rounded-lg border-2 border-slate-200 transition-all hover:scale-110 shrink-0;
+}
+
+.prose ul[data-type="taskList"] li > div {
+  @apply flex-1;
+}
+
+.prose ul[data-type="taskList"] li[data-checked="true"] > div {
+  @apply text-slate-400 line-through decoration-slate-300;
+}
+
+/* Mathematics - KaTeX Integration */
+.prose .Tiptap-mathematics-editor {
+  @apply bg-slate-50 border border-slate-200 rounded-xl p-2 font-mono text-sm focus:ring-2 focus:ring-[#6ebeea] outline-none;
+}
+
+.prose .Tiptap-mathematics-render {
+  @apply inline-block px-2 py-1 rounded-lg bg-[#6ebeea]/10 text-[#232f55] cursor-pointer transition-all hover:bg-[#6ebeea]/20;
+}
+
+.prose .Tiptap-mathematics-render--block {
+  @apply block w-full text-center py-8 my-8 bg-[#6ebeea]/5 rounded-[32px];
+}
+
+/* Placeholder style */
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #adb5bd;
+  pointer-events: none;
+  height: 0;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ProseMirror 选中节点的视觉反馈 */
+.ProseMirror-selectednode {
+  outline: 3px solid #6ebeea !important;
+  outline-offset: 4px !important;
+  border-radius: 40px !important;
+}
+
+/* 确保 img 的选中状态也生效 */
+.prose img.ProseMirror-selectednode {
+  outline: 3px solid #6ebeea !important;
+  outline-offset: 4px !important;
+}
+
+/* Video wrapper 选中状态 */
+.video-wrapper.ProseMirror-selectednode,
+.video-wrapper .ProseMirror-selectednode {
+  outline: 3px solid #6ebeea !important;
+  outline-offset: 4px !important;
+  border-radius: 32px !important;
+}
+
+/* Audio wrapper 选中状态 */
+.audio-wrapper.ProseMirror-selectednode,
+.audio-wrapper .ProseMirror-selectednode {
+  outline: 3px solid #6ebeea !important;
+  outline-offset: 4px !important;
+  border-radius: 24px !important;
+}
+
+/* Gapcursor 样式 - 间隙光标 */
+.ProseMirror-gapcursor {
+  display: none;
+  pointer-events: none;
+  position: absolute;
+}
+
+.ProseMirror-gapcursor:after {
+  content: "";
+  display: block;
+  position: absolute;
+  top: -2px;
+  width: 20px;
+  height: 4px;
+  background: #232f55;
+  border-radius: 2px;
+}
+
+.ProseMirror-focused .ProseMirror-gapcursor {
+  display: block;
+}

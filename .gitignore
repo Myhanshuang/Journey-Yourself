@@ -1,0 +1,16 @@
+test
+sideproduct
+
+# 构建输出
+frontend/dist/
+frontend/node_modules/
+static/
+
+# 环境变量
+.env
+
+# Python
+backend/.venv/
+backend/.idea/
+*.pyc
+__pycache__/

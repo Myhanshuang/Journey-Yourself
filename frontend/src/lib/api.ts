@@ -1,0 +1,112 @@
+import axios from 'axios'
+
+const api = axios.create({ baseURL: '/api' })
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+api.interceptors.response.use(
+  r => r,
+  e => {
+    if (e.response?.status === 401) {
+      localStorage.removeItem('token')
+      window.location.reload()
+    }
+    return Promise.reject(e)
+  }
+)
+
+export const authApi = {
+  login: async (p: URLSearchParams) => (await api.post('/auth/login', p)).data
+}
+
+export const assetApi = {
+  uploadCover: async (f: File) => {
+    const fd = new FormData(); fd.append('file', f)
+    return (await api.post('/assets/upload-cover', fd)).data
+  },
+  uploadVideo: async (f: File) => {
+    const fd = new FormData(); fd.append('file', f)
+    return (await api.post('/assets/upload-video', fd)).data
+  },
+  uploadAudio: async (f: File) => {
+    const fd = new FormData(); fd.append('file', f)
+    return (await api.post('/assets/upload-audio', fd)).data
+  },
+  uploadMedia: async (f: File) => {
+    const fd = new FormData(); fd.append('file', f)
+    return (await api.post('/assets/upload-media', fd)).data
+  }
+}
+
+export const notebookApi = {
+  list: async (limit?: number, offset?: number) => (await api.get('/notebooks/', { params: { limit, offset } })).data,
+  get: async (id: number) => (await api.get(`/notebooks/${id}`)).data,
+  create: async (n: any) => (await api.post('/notebooks/', n)).data,
+  update: async (id: number, n: any) => (await api.put(`/notebooks/${id}`, n)).data,
+  delete: async (id: number) => (await api.delete(`/notebooks/${id}`)).data,
+  ensureDraft: async () => (await api.get('/notebooks/drafts/ensure')).data
+}
+
+export const diaryApi = {
+  recent: async (limit?: number, offset?: number) => (await api.get('/diaries/recent', { params: { limit, offset } })).data,
+  lastYearToday: async () => (await api.get('/diaries/last-year-today')).data,
+  get: async (id: number) => (await api.get(`/diaries/${id}`)).data,
+  listByNotebook: async (id: number, limit?: number, offset?: number) => (await api.get(`/diaries/notebook/${id}`, { params: { limit, offset } })).data,
+  create: async (d: any) => (await api.post('/diaries/', d)).data,
+  update: async (id: number, d: any) => (await api.put(`/diaries/${id}`, d)).data,
+  delete: async (id: number) => (await api.delete(`/diaries/${id}`)).data
+}
+
+export const timelineApi = {
+  list: async (notebookId?: number) => (await api.get('/timeline/', { params: { notebook_id: notebookId } })).data,
+  search: async (params: any) => (await api.get('/timeline/', { params })).data
+}
+
+export const statsApi = {
+  get: async (days: number = 30) => (await api.get('/stats/', { params: { days } })).data
+}
+
+export const amapApi = {
+  regeo: async (location: string) => (await api.get('/proxy/amap/regeo', { params: { location } })).data,
+  search: async (keywords: string) => (await api.get('/proxy/amap/search', { params: { keywords } })).data,
+  getWeather: async (city: string) => (await api.get('/proxy/amap/weather', { params: { city_code: city } })).data
+}
+
+export const immichApi = {
+  listAssets: async () => (await api.get('/proxy/immich/assets')).data,
+  importAsset: async (id: string, mode: 'link' | 'copy') => 
+    (await api.post('/proxy/immich/import', null, { params: { asset_id: id, mode } })).data
+}
+
+export const userApi = {
+  me: async () => (await api.get('/users/me')).data,
+  updateProfile: async (data: any) => (await api.patch('/users/me', data)).data,
+  updatePassword: async (data: any) => (await api.patch('/users/me/password', data)).data,
+  updateImmich: async (data: any) => (await api.patch('/users/me/immich', data)).data,
+  updateGeo: async (data: any) => (await api.patch('/users/me/geo', data)).data,
+  createUser: async (data: any) => (await api.post('/users/', data)).data,
+  exportDb: async () => {
+    const res = await api.get('/users/system/export', { responseType: 'blob' })
+    const url = window.URL.createObjectURL(new Blob([res.data]))
+    const link = document.createElement('a')
+    link.href = url; link.setAttribute('download', 'journey_backup.db')
+    document.body.appendChild(link); link.click(); document.body.removeChild(link)
+  },
+  importDb: async (file: File) => {
+    const fd = new FormData(); fd.append('file', file)
+    return (await api.post('/users/system/import', fd)).data
+  }
+}
+
+export const shareApi = {
+  list: async () => (await api.get('/share/')).data,
+  create: async (data: { diary_id?: number; notebook_id?: number; expires_in_days?: number | null }) => (await api.post('/share/', data)).data,
+  delete: async (id: number) => (await api.delete(`/share/${id}`)).data,
+  getPublic: async (token: string) => (await api.get(`/share/${token}`)).data
+}
+
+export default api

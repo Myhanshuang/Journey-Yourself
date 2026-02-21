@@ -1,0 +1,18 @@
+services:
+  journey:
+    #build: .
+    image: journey-my-dairy:latest
+    container_name: journey-app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    env_file:
+      - .env
+    environment:
+      # 也可以在这里覆盖 .env 中的变量
+      - DATABASE_URL=sqlite:///./data/journey.db
+    restart: unless-stopped
+
+volumes:
+  data:
