@@ -29,6 +29,10 @@ class User(SQLModel, table=True):
     immich_api_key: Optional[str] = None
     immich_config: Dict[str, Any] = Field(default_factory=lambda: {"mode": "link"}, sa_column=Column(JSON))
     
+    karakeep_url: Optional[str] = None
+    karakeep_api_key: Optional[str] = None
+    karakeep_config: Dict[str, Any] = Field(default_factory=lambda: {}, sa_column=Column(JSON))
+    
     geo_provider: Optional[str] = Field(default="amap") # amap
     geo_api_key: Optional[str] = None
     

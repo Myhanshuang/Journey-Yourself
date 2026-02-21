@@ -29,6 +29,10 @@ class ImmichUpdate(BaseModel):
     url: str
     api_key: str
 
+class KarakeepUpdate(BaseModel):
+    url: str
+    api_key: str
+
 class GeoUpdate(BaseModel):
     provider: str # amap
     api_key: str
@@ -62,6 +66,8 @@ async def read_user_me(current_user: User = Depends(get_current_user)):
         "time_offset_mins": current_user.time_offset_mins,
         "immich_url": current_user.immich_url,
         "has_immich_key": bool(current_user.immich_api_key),
+        "karakeep_url": current_user.karakeep_url,
+        "has_karakeep_key": bool(current_user.karakeep_api_key),
         "geo_provider": current_user.geo_provider or "amap",
         "has_geo_key": bool(current_user.geo_api_key)
     }
@@ -108,6 +114,39 @@ async def update_immich(immich_in: ImmichUpdate, current_user: User = Depends(ge
             raise HTTPException(status_code=400, detail=f"Immich connection failed: {str(e)}")
         except Exception as e:
             print(f"DEBUG: Unexpected error during Immich verification: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+@router.patch("/me/karakeep")
+async def update_karakeep(karakeep_in: KarakeepUpdate, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    base_url = karakeep_in.url.strip().rstrip("/")
+    api_key = karakeep_in.api_key.strip()
+    print(f"DEBUG: Verifying Karakeep link for {current_user.username} at {base_url}")
+    
+    # Karakeep usually uses Bearer token, but let's check headers.
+    # Assuming "Authorization: Bearer <token>"
+    headers = {"Authorization": f"Bearer {api_key}"}
+    
+    async with httpx.AsyncClient(verify=False) as client:
+        try:
+            # Verify endpoint - try to list bookmarks to verify token
+            # Adjust endpoint if needed.
+            resp = await client.get(f"{base_url}/api/bookmarks", headers=headers, params={"limit": 1}, timeout=8.0)
+            if resp.status_code == 200 or resp.status_code == 404: # 404 might mean no bookmarks but auth worked? No, usually 401/403 for auth fail.
+                # Actually, if it's 200, we are good.
+                print(f"DEBUG: Karakeep verification successful for {current_user.username}")
+                current_user.karakeep_url = base_url
+                current_user.karakeep_api_key = encrypt_data(api_key)
+                session.add(current_user)
+                session.commit()
+                return {"status": "ok"}
+            
+            print(f"DEBUG: Karakeep failed with status {resp.status_code}: {resp.text}")
+            raise HTTPException(status_code=400, detail=f"Karakeep: {resp.status_code}")
+        except httpx.RequestError as e:
+            print(f"DEBUG: Karakeep connection error: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"Karakeep connection failed: {str(e)}")
+        except Exception as e:
+            print(f"DEBUG: Unexpected error during Karakeep verification: {str(e)}")
             raise HTTPException(status_code=500, detail=str(e))
 
 @router.patch("/me/geo")

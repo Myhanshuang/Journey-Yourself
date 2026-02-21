@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  User, Lock, Database, Cloud, ChevronRight, Save, Download, Upload, LogOut, X, Info, CheckCircle2, AlertCircle, Globe, Clock, Plus, Minus, UserPlus, Shield, User as UserIcon, Link2
+  User, Lock, Database, Cloud, ChevronRight, Save, Download, Upload, LogOut, X, Info, CheckCircle2, AlertCircle, Globe, Clock, Plus, Minus, UserPlus, Shield, User as UserIcon, Link2, Bookmark
 } from 'lucide-react'
 import { cn, Card, useToast, useAdjustedTime } from '../components/ui/JourneyUI'
-import { userApi } from '../lib/api'
+import { userApi, karakeepApi } from '../lib/api'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 
@@ -12,7 +12,7 @@ export default function SettingsView() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data: user, isLoading } = useQuery({ queryKey: ['user', 'me'], queryFn: userApi.me })
-  const [activeModal, setActiveModal] = useState<'profile' | 'password' | 'immich' | 'geo' | 'system' | 'timezone' | 'timeoffset' | 'createuser' | null>(null)
+  const [activeModal, setActiveModal] = useState<'profile' | 'password' | 'immich' | 'karakeep' | 'geo' | 'system' | 'timezone' | 'timeoffset' | 'createuser' | null>(null)
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -53,6 +53,7 @@ export default function SettingsView() {
           <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-300 ml-2">Integrations</h3>
           <Card className="divide-y divide-slate-50 text-slate-900">
             <SettingsRow icon={<Cloud size={18} className={cn(user?.has_immich_key ? "text-emerald-500" : "text-indigo-500")} />} label="Immich Library" sub={user?.has_immich_key ? "Connected" : "Not Configured"} onClick={() => setActiveModal('immich')} />
+            <SettingsRow icon={<Bookmark size={18} className={cn(user?.has_karakeep_key ? "text-emerald-500" : "text-pink-500")} />} label="Karakeep Bookmarks" sub={user?.has_karakeep_key ? "Connected" : "Not Configured"} onClick={() => setActiveModal('karakeep')} />
             <SettingsRow icon={<Globe size={18} className={cn(user?.has_geo_key ? "text-emerald-500" : "text-indigo-500")} />} label="Geographic Service" sub={user?.has_geo_key ? "Configured" : "Not Configured"} onClick={() => setActiveModal('geo')} />
           </Card>
         </div>
@@ -74,6 +75,7 @@ export default function SettingsView() {
         {activeModal === 'profile' && <ProfileModal user={user} onClose={() => { setActiveModal(null); queryClient.invalidateQueries(); }} />}
         {activeModal === 'password' && <PasswordModal onClose={() => setActiveModal(null)} />}
         {activeModal === 'immich' && <ImmichModal user={user} onClose={() => { setActiveModal(null); queryClient.invalidateQueries(); }} />}
+        {activeModal === 'karakeep' && <KarakeepModal user={user} onClose={() => { setActiveModal(null); queryClient.invalidateQueries(); }} />}
         {activeModal === 'geo' && <GeoModal user={user} onClose={() => { setActiveModal(null); queryClient.invalidateQueries(); }} />}
         {activeModal === 'system' && <SystemModal onClose={() => setActiveModal(null)} />}
         {activeModal === 'timezone' && <TimezoneModal user={user} onClose={() => { setActiveModal(null); queryClient.invalidateQueries(); }} />}
@@ -81,6 +83,58 @@ export default function SettingsView() {
         {activeModal === 'createuser' && <CreateUserModal onClose={() => setActiveModal(null)} />}
       </AnimatePresence>
     </motion.div>
+  )
+}
+
+function KarakeepModal({ user, onClose }: any) {
+  const [form, setForm] = useState({ url: user?.karakeep_url || 'https://api.karakeep.app', key: '' });
+  const addToast = useToast(state => state.add)
+  const mutation = useMutation({
+    mutationFn: userApi.updateKarakeep,
+    onSuccess: () => {
+      addToast('success', 'Karakeep Linked');
+      onClose();
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.detail || 'Verification failed. Check URL and Key.'
+      addToast('error', msg)
+    }
+  })
+
+  return (
+    <ModalWrapper title="Karakeep Link" onClose={onClose}>
+      <div className="space-y-4">
+        <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">Server URL</label>
+            <input 
+                className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700 focus:ring-2 focus:ring-pink-100 transition-all" 
+                placeholder="e.g. https://api.karakeep.app" 
+                value={form.url} 
+                onChange={e => setForm({ ...form, url: e.target.value })} 
+            />
+        </div>
+        <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">API Token</label>
+            <input 
+                className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700 focus:ring-2 focus:ring-pink-100 transition-all" 
+                type="password" 
+                placeholder="Paste your API Token" 
+                value={form.key} 
+                onChange={e => setForm({ ...form, key: e.target.value })} 
+            />
+        </div>
+      </div>
+      <button 
+        onClick={() => {
+            if (!form.url || !form.key) return addToast('error', 'URL and Key required')
+            mutation.mutate({ url: form.url, api_key: form.key })
+        }} 
+        disabled={mutation.isPending} 
+        className="w-full py-5 bg-pink-500 text-white rounded-[24px] font-black shadow-xl mt-8 disabled:opacity-50 text-xs uppercase tracking-widest active:scale-95 transition-all hover:bg-pink-600"
+      >
+        {mutation.isPending ? 'Verifying...' : 'Verify & Link'}
+      </button>
+    </ModalWrapper>
   )
 }
 

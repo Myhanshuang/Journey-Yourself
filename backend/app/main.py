@@ -4,7 +4,7 @@ from fastapi.responses import FileResponse
 from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import create_db_and_tables
-from app.routers import auth, notebooks, diaries, proxy, assets, amap, users, timeline, stats, tags, share
+from app.routers import auth, notebooks, diaries, proxy, assets, amap, users, timeline, stats, tags, share, karakeep
 from app.config import settings
 import os
 import asyncio
@@ -94,6 +94,7 @@ app.include_router(timeline.router)
 app.include_router(stats.router)
 app.include_router(tags.router)
 app.include_router(share.router)
+app.include_router(karakeep.router)
 
 # --- 生产环境静态文件托管 ---
 # 双重检查：先检查相对路径（Docker），再检查绝对路径（本地开发）

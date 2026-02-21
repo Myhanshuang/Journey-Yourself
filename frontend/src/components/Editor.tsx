@@ -22,13 +22,14 @@ import {
   Bold, Italic, Underline as UnderlineIcon, List, 
   ImageIcon, Save, ArrowLeft, Book,
   Heading1, Heading2, Quote, Code, ListOrdered, MapPin, Smile, Cloud, Tag, Sun,
-  Table as TableIcon, Sigma, ListChecks, Video as VideoIcon, Music, Upload
+  Table as TableIcon, Sigma, ListChecks, Video as VideoIcon, Music, Upload, Bookmark
 } from 'lucide-react'
 import { cn, useToast, ServiceSetupModal, useIsMobile } from './ui/JourneyUI'
 import { useQuery } from '@tanstack/react-query'
 import MoodPicker from './modals/MoodPicker'
 import LocationModal from './modals/LocationModal'
 import ImmichPicker from './modals/ImmichPicker'
+import KarakeepPicker from './modals/KarakeepPicker'
 import TagPicker from './modals/TagPicker'
 import WeatherModal from './modals/WeatherModal'
 import NotebookPicker from './modals/NotebookPicker'
@@ -117,8 +118,8 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
     return initialData?.tags || []
   })
   
-  const [activeModal, setActiveModal] = useState<'notebook' | 'mood' | 'location' | 'immich' | 'tags' | 'weather' | 'unconfigured' | null>(null)
-  const [unconfiguredType, setUnconfiguredType] = useState<'immich' | 'geo' | null>(null)
+  const [activeModal, setActiveModal] = useState<'notebook' | 'mood' | 'location' | 'immich' | 'karakeep' | 'tags' | 'weather' | 'unconfigured' | null>(null)
+  const [unconfiguredType, setUnconfiguredType] = useState<'immich' | 'karakeep' | 'geo' | null>(null)
   const [realWordCount, setRealWordCount] = useState(0)
   const [uploading, setUploading] = useState<'video' | 'audio' | 'image' | null>(null)
   const addToast = useToast(state => state.add)
@@ -320,9 +321,12 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
   if (!editor) return null
   const currentNotebook = notebooks.find((n:any) => n.id === selectedNotebookId) || notebooks[0]
 
-  const handleServiceClick = (type: 'immich' | 'geo', modal: any) => {
+  const handleServiceClick = (type: 'immich' | 'karakeep' | 'geo', modal: any) => {
     if (type === 'immich' && !user?.has_immich_key) {
       setUnconfiguredType('immich'); setActiveModal('unconfigured'); return
+    }
+    if (type === 'karakeep' && !user?.has_karakeep_key) {
+      setUnconfiguredType('karakeep'); setActiveModal('unconfigured'); return
     }
     if (type === 'geo' && !user?.has_geo_key) {
       setUnconfiguredType('geo'); setActiveModal('unconfigured'); return
@@ -415,6 +419,7 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
             <HeaderButton icon={<MapPin size={14}/>} label={location ? location.name : 'Place'} onClick={() => handleServiceClick('geo', 'location')} highlight={!!location} />
             <HeaderButton icon={<Tag size={14}/>} label={tags.length > 0 ? `${tags.length} Tags` : 'Tags'} onClick={() => setActiveModal('tags')} highlight={tags.length > 0} />
             <HeaderButton icon={<ImageIcon size={14}/>} label="Photos" onClick={() => handleServiceClick('immich', 'immich')} className="bg-[#232f55] text-white hover:bg-[#232f55]/90" />
+            <HeaderButton icon={<Bookmark size={14}/>} label="Karakeep" onClick={() => handleServiceClick('karakeep', 'karakeep')} className="bg-pink-500 text-white hover:bg-pink-600" />
           </div>
         </div>
 
@@ -521,6 +526,22 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
                 setActiveModal(null)
               } catch(e) { alert('Failed') }
             }} 
+            onClose={() => setActiveModal(null)} 
+          />
+        )}
+        {activeModal === 'karakeep' && (
+          <KarakeepPicker 
+            onSelect={(bookmark: any) => {
+              const content = `
+                <blockquote>
+                  <p><a href="${bookmark.url}" target="_blank" rel="noopener noreferrer"><strong>${bookmark.title || bookmark.url}</strong></a></p>
+                  ${bookmark.description ? `<p>${bookmark.description}</p>` : ''}
+                  ${bookmark.image_url ? `<img src="${bookmark.image_url}" alt="${bookmark.title}" style="max-height: 200px; border-radius: 8px; margin-top: 8px;" />` : ''}
+                </blockquote>
+              `
+              editor.chain().focus().insertContent(content).run()
+              setActiveModal(null)
+            }}
             onClose={() => setActiveModal(null)} 
           />
         )}

@@ -28,6 +28,8 @@ class UserRead(UserBase):
     id: int
     role: str
     has_immich_key: bool = False
+    karakeep_url: Optional[str] = None
+    has_karakeep_key: bool = False
     has_geo_key: bool = False
     geo_provider: Optional[str] = "amap"
 

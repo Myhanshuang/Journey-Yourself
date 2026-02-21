@@ -90,6 +90,10 @@ export const amapApi = {
   getWeather: async (city: string) => (await api.get('/proxy/amap/weather', { params: { city_code: city } })).data
 }
 
+export const karakeepApi = {
+  listBookmarks: async (page: number = 1) => (await api.get('/proxy/karakeep/bookmarks', { params: { page } })).data
+}
+
 export const immichApi = {
   listAssets: async () => (await api.get('/proxy/immich/assets')).data,
   importAsset: async (id: string, mode: 'link' | 'copy') => 
@@ -101,6 +105,7 @@ export const userApi = {
   updateProfile: async (data: any) => (await api.patch('/users/me', data)).data,
   updatePassword: async (data: any) => (await api.patch('/users/me/password', data)).data,
   updateImmich: async (data: any) => (await api.patch('/users/me/immich', data)).data,
+  updateKarakeep: async (data: any) => (await api.patch('/users/me/karakeep', data)).data,
   updateGeo: async (data: any) => (await api.patch('/users/me/geo', data)).data,
   createUser: async (data: any) => (await api.post('/users/', data)).data,
   exportDb: async () => {
