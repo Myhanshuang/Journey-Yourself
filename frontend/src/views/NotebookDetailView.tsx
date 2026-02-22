@@ -125,26 +125,23 @@ export default function NotebookDetailView() {
         <ActionMenu actions={actions} />
       </header>
 
+      {/* 笔记本封面和信息 - 移动端垂直排列，桌面端水平排列 */}
       <div className={cn(
-        "flex gap-8",
-        isMobile ? "flex-col items-center text-center" : "flex-row items-end gap-12"
+        isMobile ? "flex flex-col items-center text-center space-y-6" : "flex flex-row items-end gap-12"
       )}>
         {/* 封面图片 - 始终不收缩 */}
         <div className={cn(
           "rounded-[40px] overflow-hidden shadow-2xl bg-slate-200 flex-shrink-0",
-          isMobile ? "w-44 h-60" : "w-56 h-72"
+          isMobile ? "w-40 h-56" : "w-56 h-72"
         )}>
           <img src={getAssetUrl(notebook.cover_url)} className="w-full h-full object-cover" />
         </div>
-        {/* 标题和描述 - 允许收缩以防止图片被挤压 */}
+        {/* 标题和描述 - 移动端全宽 */}
         <div className={cn(
-          "space-y-3 min-w-0",
-          isMobile ? "w-full pb-2" : "flex-1 pb-4"
+          "space-y-3",
+          isMobile ? "w-full px-4" : "flex-1 min-w-0 pb-4"
         )}>
-          <h2 className={cn(
-            "font-black tracking-tighter leading-tight break-words",
-            isMobile ? "text-3xl" : "text-6xl"
-          )}>
+          <h2 className="text-5xl md:text-6xl font-black tracking-tighter leading-tight break-words">
             {notebook.name}
           </h2>
           <p className={cn(

@@ -31,7 +31,7 @@ export default function StatsView() {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={cn("space-y-8 pb-40 text-[#232f55]", isMobile ? "py-6" : "py-12 space-y-12")}>
       <header className="space-y-3">
-        <h2 className={cn("font-black tracking-tighter leading-none", isMobile ? "text-5xl" : "text-7xl")}>Insights</h2>
+        <h2 className="text-5xl md:text-6xl font-black tracking-tighter leading-none">Insights</h2>
         <p className={cn("text-slate-400 font-medium italic opacity-70", isMobile ? "text-lg" : "text-2xl")}>The geometry of your soul.</p>
       </header>
 

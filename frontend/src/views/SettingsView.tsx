@@ -25,7 +25,7 @@ export default function SettingsView() {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="py-12 max-w-[700px] mx-auto space-y-12 pb-32 text-slate-900">
       <header className="space-y-2 text-slate-900">
-        <h2 className="text-5xl font-black tracking-tight">Settings</h2>
+        <h2 className="text-5xl md:text-6xl font-black tracking-tighter">Settings</h2>
         <p className="text-xl text-slate-400 font-medium italic">Your private sanctuary, secured.</p>
       </header>
 

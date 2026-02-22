@@ -81,7 +81,7 @@ export default function TimelineView() {
       <header className="flex flex-col gap-6 md:gap-10">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div className="space-y-2 md:space-y-3 text-slate-900">
-            <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-none">Timeline</h2>
+            <h2 className="text-5xl md:text-6xl font-black tracking-tighter leading-none">Timeline</h2>
             <p className="text-lg md:text-2xl text-slate-400 font-medium italic opacity-70">Architecture of memory.</p>
           </div>
           <div className="bg-slate-200/50 backdrop-blur-md p-1 rounded-2xl flex shadow-inner border border-white/50 text-slate-900">

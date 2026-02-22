@@ -45,7 +45,7 @@ export default function NotebooksListView() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-8 md:py-12 space-y-8 md:space-y-12">
       <header className="flex items-start md:items-end justify-between gap-4">
         <div className="space-y-1 md:space-y-2">
-          <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-slate-900 leading-none">Collections</h2>
+          <h2 className="text-5xl md:text-6xl font-black tracking-tighter text-slate-900 leading-none">Collections</h2>
           <p className="text-base md:text-xl text-slate-400 font-medium italic">Every volume tells a different story.</p>
         </div>
         <button onClick={handleAdd} className="p-4 md:p-5 bg-slate-900 text-white rounded-2xl md:rounded-3xl shadow-2xl hover:bg-indigo-600 transition-all active:scale-95"><Plus size={24} strokeWidth={3} /></button>
