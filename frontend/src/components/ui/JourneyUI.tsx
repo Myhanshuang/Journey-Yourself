@@ -91,7 +91,7 @@ export function ActionMenu({ actions }: { actions: ActionItem[] }) {
 }
 
 // --- Select Option Type ---
-export interface SelectOption {
+export type SelectOption = {
   value: string
   label: string
 }
