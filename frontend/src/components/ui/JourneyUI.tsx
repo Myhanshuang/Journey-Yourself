@@ -90,6 +90,57 @@ export function ActionMenu({ actions }: { actions: ActionItem[] }) {
   )
 }
 
+// --- Select Option Type ---
+export interface SelectOption {
+  value: string
+  label: string
+}
+
+// --- Configurable Select Component ---
+export function ConfigSelect({ 
+  label, 
+  options, 
+  value, 
+  onChange,
+  theme = 'purple'
+}: { 
+  label: string
+  options: SelectOption[]
+  value: string
+  onChange: (v: string) => void
+  theme?: 'purple' | 'indigo' | 'emerald' | 'pink'
+}) {
+  const themeColors = {
+    purple: 'focus:ring-purple-100',
+    indigo: 'focus:ring-indigo-100',
+    emerald: 'focus:ring-emerald-100',
+    pink: 'focus:ring-pink-100'
+  }
+  const isMobile = useIsMobile()
+  
+  return (
+    <div className="space-y-2">
+      <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">{label}</label>
+      <div className="relative">
+        <select 
+          className={cn(
+            "w-full bg-slate-50 rounded-2xl outline-none font-bold text-slate-700 appearance-none border-2 border-transparent transition-all cursor-pointer",
+            themeColors[theme],
+            isMobile ? "px-5 py-3" : "px-6 py-4"
+          )}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+        >
+          {options.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+        <ChevronRight className="absolute right-4 md:right-6 top-1/2 -translate-y-1/2 rotate-90 text-slate-300 pointer-events-none" size={18} />
+      </div>
+    </div>
+  )
+}
+
 export function DiaryItemCard({ diary, onClick, className, size = 'md', noHoverEffect = false }: any) {
   const bgImage = getFirstImage(diary.content)
   const { getAdjusted } = useAdjustedTime()

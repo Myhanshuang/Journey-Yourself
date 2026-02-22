@@ -125,13 +125,34 @@ export default function NotebookDetailView() {
         <ActionMenu actions={actions} />
       </header>
 
-      <div className={cn("flex items-end", isMobile ? "flex-col items-center text-center gap-6" : "gap-12")}>
-        <div className={cn("rounded-[40px] overflow-hidden shadow-2xl bg-slate-200", isMobile ? "w-40 h-56" : "w-56 h-72")}>
+      <div className={cn(
+        "flex gap-8",
+        isMobile ? "flex-col items-center text-center" : "flex-row items-end gap-12"
+      )}>
+        {/* 封面图片 - 始终不收缩 */}
+        <div className={cn(
+          "rounded-[40px] overflow-hidden shadow-2xl bg-slate-200 flex-shrink-0",
+          isMobile ? "w-44 h-60" : "w-56 h-72"
+        )}>
           <img src={getAssetUrl(notebook.cover_url)} className="w-full h-full object-cover" />
         </div>
-        <div className={cn("pb-4 space-y-3 flex-1 text-slate-900", isMobile ? "w-full" : "")}>
-          <h2 className={cn("font-black tracking-tighter leading-none", isMobile ? "text-4xl" : "text-6xl")}>{notebook.name}</h2>
-          <p className={cn("text-slate-400 font-medium leading-relaxed italic", isMobile ? "text-lg" : "text-2xl")}>{notebook.description || "The unwritten chapters."}</p>
+        {/* 标题和描述 - 允许收缩以防止图片被挤压 */}
+        <div className={cn(
+          "space-y-3 min-w-0",
+          isMobile ? "w-full pb-2" : "flex-1 pb-4"
+        )}>
+          <h2 className={cn(
+            "font-black tracking-tighter leading-tight break-words",
+            isMobile ? "text-3xl" : "text-6xl"
+          )}>
+            {notebook.name}
+          </h2>
+          <p className={cn(
+            "text-slate-400 font-medium leading-relaxed italic",
+            isMobile ? "text-base" : "text-2xl"
+          )}>
+            {notebook.description || "The unwritten chapters."}
+          </p>
         </div>
       </div>
 

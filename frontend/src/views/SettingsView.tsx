@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   User, Lock, Database, Cloud, ChevronRight, Save, Download, Upload, LogOut, X, Info, CheckCircle2, AlertCircle, Globe, Clock, Plus, Minus, UserPlus, Shield, User as UserIcon, Link2, Bookmark, Sparkles, Timer
 } from 'lucide-react'
-import { cn, Card, useToast, useAdjustedTime } from '../components/ui/JourneyUI'
+import { cn, Card, useToast, useAdjustedTime, ConfigSelect, SelectOption } from '../components/ui/JourneyUI'
 import { userApi, karakeepApi } from '../lib/api'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
@@ -110,25 +110,30 @@ function AIModal({ user, onClose }: any) {
     }
   })
 
+  // AI Provider 配置 - 可扩展
+  const AI_PROVIDERS: { value: string; label: string }[] = [
+    { value: 'openai', label: 'OpenAI' },
+    { value: 'anthropic', label: 'Anthropic' },
+    { value: 'ollama', label: 'Ollama (Local)' },
+    { value: 'other', label: 'Other (OpenAI Compatible)' },
+  ]
+  
+  // AI 摘要语言配置 - 可扩展
+  const AI_LANGUAGES: { value: string; label: string }[] = [
+    { value: 'zh', label: '中文' },
+    { value: 'en', label: 'English' },
+  ]
+
   return (
     <ModalWrapper title="AI Assistant" onClose={onClose}>
       <div className="space-y-4">
-        <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">Provider</label>
-            <div className="relative">
-                <select 
-                    className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700 appearance-none border-2 border-transparent focus:border-purple-100 transition-all cursor-pointer"
-                    value={form.provider}
-                    onChange={e => setForm({ ...form, provider: e.target.value })}
-                >
-                    <option value="openai">OpenAI</option>
-                    <option value="anthropic">Anthropic</option>
-                    <option value="ollama">Ollama (Local)</option>
-                    <option value="other">Other (OpenAI Compatible)</option>
-                </select>
-                <ChevronRight className="absolute right-6 top-1/2 -translate-y-1/2 rotate-90 text-slate-300 pointer-events-none" size={18} />
-            </div>
-        </div>
+        <ConfigSelect 
+          label="Provider"
+          options={AI_PROVIDERS}
+          value={form.provider}
+          onChange={v => setForm({ ...form, provider: v })}
+          theme="purple"
+        />
         <div className="space-y-2">
             <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">Base URL</label>
             <input 
@@ -157,20 +162,13 @@ function AIModal({ user, onClose }: any) {
                 onChange={e => setForm({ ...form, model: e.target.value })} 
             />
         </div>
-        <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">Summary Language</label>
-            <div className="relative">
-                <select 
-                    className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700 appearance-none border-2 border-transparent focus:border-purple-100 transition-all cursor-pointer"
-                    value={form.language}
-                    onChange={e => setForm({ ...form, language: e.target.value })}
-                >
-                    <option value="zh">中文</option>
-                    <option value="en">English</option>
-                </select>
-                <ChevronRight className="absolute right-6 top-1/2 -translate-y-1/2 rotate-90 text-slate-300 pointer-events-none" size={18} />
-            </div>
-        </div>
+        <ConfigSelect 
+          label="Summary Language"
+          options={AI_LANGUAGES}
+          value={form.language}
+          onChange={v => setForm({ ...form, language: v })}
+          theme="purple"
+        />
       </div>
       <button 
         onClick={() => {
@@ -437,15 +435,9 @@ function GeoModal({ user, onClose }: any) {
       <div className="space-y-6">
         <div className="space-y-2">
           <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">Service Provider</label>
-          <div className="relative">
-            <select
-              className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700 appearance-none border-2 border-transparent focus:border-indigo-100 transition-all cursor-pointer"
-              value={form.provider}
-              onChange={e => setForm({ ...form, provider: e.target.value })}
-            >
-              <option value="amap">高德地图 (Amap)</option>
-            </select>
-            <ChevronRight className="absolute right-6 top-1/2 -translate-y-1/2 rotate-90 text-slate-300 pointer-events-none" size={18} />
+          <div className="px-6 py-4 bg-indigo-50 rounded-2xl font-bold text-indigo-600 flex items-center gap-3">
+            <Globe size={18} />
+            高德地图 (Amap)
           </div>
         </div>
         <div className="space-y-2">
