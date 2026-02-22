@@ -38,6 +38,7 @@ class AIUpdate(BaseModel):
     base_url: str
     api_key: str
     model: str
+    language: str = "zh"
 
 class GeoUpdate(BaseModel):
     provider: str # amap
@@ -77,6 +78,7 @@ async def read_user_me(current_user: User = Depends(get_current_user)):
         "ai_provider": current_user.ai_provider or "openai",
         "ai_base_url": current_user.ai_base_url,
         "ai_model": current_user.ai_model,
+        "ai_language": current_user.ai_language or "zh",
         "has_ai_key": bool(current_user.ai_api_key),
         "geo_provider": current_user.geo_provider or "amap",
         "has_geo_key": bool(current_user.geo_api_key)
@@ -165,6 +167,7 @@ async def update_ai(ai_in: AIUpdate, current_user: User = Depends(get_current_us
     api_key = ai_in.api_key.strip()
     provider = ai_in.provider.lower()
     model = ai_in.model.strip()
+    language = ai_in.language or "zh"
     
     print(f"DEBUG: Verifying AI link for {current_user.username} with {provider} at {base_url}")
     
@@ -196,6 +199,7 @@ async def update_ai(ai_in: AIUpdate, current_user: User = Depends(get_current_us
             current_user.ai_base_url = base_url
             current_user.ai_api_key = encrypt_data(api_key)
             current_user.ai_model = model
+            current_user.ai_language = language
             session.add(current_user)
             session.commit()
             return {"status": "ok"}

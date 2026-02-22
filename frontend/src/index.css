@@ -110,6 +110,62 @@ h1, h2, h3, h4, h5, h6 {
   @apply bg-[#232f55] text-slate-100 p-8 rounded-[32px] font-mono text-sm my-10 overflow-x-auto shadow-2xl;
 }
 
+.prose pre code {
+  @apply bg-transparent p-0 border-none text-inherit;
+}
+
+/* Code Block Syntax Highlighting - Lowlight theme */
+.prose pre .hljs-comment,
+.prose pre .hljs-quote {
+  @apply text-slate-400;
+}
+
+.prose pre .hljs-keyword,
+.prose pre .hljs-selector-tag,
+.prose pre .hljs-addition {
+  @apply text-[#6ebeea];
+}
+
+.prose pre .hljs-string,
+.prose pre .hljs-meta .hljs-string,
+.prose pre .hljs-attribute {
+  @apply text-amber-300;
+}
+
+.prose pre .hljs-number,
+.prose pre .hljs-literal,
+.prose pre .hljs-regexp {
+  @apply text-pink-300;
+}
+
+.prose pre .hljs-function .hljs-title,
+.prose pre .hljs-title.function_ {
+  @apply text-emerald-300;
+}
+
+.prose pre .hljs-variable,
+.prose pre .hljs-template-variable,
+.prose pre .hljs-params {
+  @apply text-slate-200;
+}
+
+.prose pre .hljs-built_in,
+.prose pre .hljs-class .hljs-title {
+  @apply text-purple-300;
+}
+
+.prose pre .hljs-deletion {
+  @apply text-red-400;
+}
+
+.prose pre .hljs-emphasis {
+  @apply italic;
+}
+
+.prose pre .hljs-strong {
+  @apply font-bold;
+}
+
 .prose img {
   @apply rounded-[40px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] my-16 border border-white/50 mx-auto;
 }

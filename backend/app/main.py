@@ -5,12 +5,14 @@ from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import create_db_and_tables
 from app.routers import auth, notebooks, diaries, proxy, assets, amap, users, timeline, stats, tags, share, karakeep, tasks, search
+from app.scheduler import start_scheduler, shutdown_scheduler
 from app.config import settings
 import os
 import asyncio
 import shutil
 from pathlib import Path
 from datetime import datetime
+from contextlib import asynccontextmanager
 
 # 获取项目根目录（用于本地开发环境）
 PROJECT_ROOT = Path(__file__).parent.parent.parent
@@ -77,6 +79,13 @@ async def on_startup():
     create_db_and_tables()
     # 启动自动备份后台任务
     asyncio.create_task(auto_backup_task())
+    # 启动任务调度器
+    start_scheduler()
+
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    shutdown_scheduler()
 
 # Health check - 必须在 SPA fallback 之前
 @app.get("/health")

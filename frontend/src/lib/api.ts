@@ -134,4 +134,11 @@ export const shareApi = {
   getPublic: async (token: string) => (await api.get(`/share/${token}`)).data
 }
 
+export const taskApi = {
+  list: async () => (await api.get('/tasks/')).data,
+  toggle: async (taskName: string, enabled: boolean) => (await api.patch(`/tasks/${taskName}/toggle`, { enabled })).data,
+  update: async (taskName: string, data: { is_enabled?: boolean; cron_expr?: string }) => 
+    (await api.patch(`/tasks/${taskName}`, data)).data
+}
+
 export default api

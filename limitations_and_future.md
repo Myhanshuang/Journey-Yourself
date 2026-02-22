@@ -8,3 +8,4 @@ Future features:
 - live photo support for some series phones.
 - map to present all dairies.
 - ui update.
+- rewrite search

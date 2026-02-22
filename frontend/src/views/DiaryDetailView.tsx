@@ -20,12 +20,17 @@ import { TaskList } from '@tiptap/extension-task-list'
 import { TaskItem } from '@tiptap/extension-task-item'
 import { MathExtension } from 'tiptap-math-extension'
 import { Markdown } from 'tiptap-markdown'
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import { common, createLowlight } from 'lowlight'
 import { Video } from '../components/extensions/Video'
 import { Audio } from '../components/extensions/Audio'
 import { Image } from '../components/extensions/Image'
+import { Bookmark } from '../components/extensions/Bookmark'
 import { useParams, useNavigate } from 'react-router-dom'
 
 import 'katex/dist/katex.min.css'
+
+const lowlight = createLowlight(common)
 
 const WEATHER_ICONS: any = {
   "☀️": Sun, "⛅️": Cloud, "☁️": Cloud, "🌧️": CloudRain, "⛈️": CloudLightning, "❄️": Snowflake, "💨": Wind, "🌫️": Wind
@@ -53,11 +58,19 @@ export default function DiaryDetailView() {
   const editor = useEditor({
     editable: false,
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        codeBlock: false,
+        heading: { levels: [1, 2, 3] },
+      }),
+      CodeBlockLowlight.configure({
+        defaultLanguage: 'plaintext',
+        lowlight,
+      }),
       Gapcursor,
       Image,
       Video,
       Audio,
+      Bookmark,
       Underline,
       Markdown,
       Link.configure({ HTMLAttributes: { class: 'text-[#6ebeea] underline underline-offset-4' } }),

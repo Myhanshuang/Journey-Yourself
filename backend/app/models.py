@@ -37,9 +37,13 @@ class User(SQLModel, table=True):
     ai_base_url: Optional[str] = None
     ai_api_key: Optional[str] = None
     ai_model: Optional[str] = Field(default="gpt-3.5-turbo")
+    ai_language: Optional[str] = Field(default="zh")  # zh or en
     
     geo_provider: Optional[str] = Field(default="amap") # amap
     geo_api_key: Optional[str] = None
+    
+    # 用户任务配置 (e.g. {"daily_summary": {"enabled": true}})
+    task_configs: Dict[str, Any] = Field(default_factory=lambda: {}, sa_column=Column(JSON))
     
     avatar_url: Optional[str] = None
     notebooks: List["Notebook"] = Relationship(back_populates="user")
@@ -97,3 +101,17 @@ class ShareToken(SQLModel, table=True):
     
     # 是否有效
     is_active: bool = Field(default=True)
+
+
+class Task(SQLModel, table=True):
+    """定时任务配置模型"""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str = Field(unique=True, index=True)  # 任务标识 e.g. "daily_summary"
+    display_name: str  # 显示名称 e.g. "每日阅读摘要"
+    description: str  # 任务描述
+    is_enabled: bool = Field(default=True)  # 全局开关
+    cron_expr: str = Field(default="0 0 * * *")  # cron 表达式，默认每日0点
+    last_run: Optional[datetime] = None
+    next_run: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

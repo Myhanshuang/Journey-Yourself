@@ -16,6 +16,7 @@ const WriteView = lazy(() => import('./views/WriteView'))
 const EditView = lazy(() => import('./views/EditView'))
 const SharesView = lazy(() => import('./views/SharesView'))
 const ShareView = lazy(() => import('./views/ShareView'))
+const TasksView = lazy(() => import('./views/TasksView'))
 
 // Loading fallback
 function PageLoader() {
@@ -150,6 +151,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoader />}>
                 <SharesView />
+              </Suspense>
+            ),
+          },
+          {
+            path: '/tasks',
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <TasksView />
               </Suspense>
             ),
           },

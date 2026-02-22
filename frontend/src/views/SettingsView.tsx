@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  User, Lock, Database, Cloud, ChevronRight, Save, Download, Upload, LogOut, X, Info, CheckCircle2, AlertCircle, Globe, Clock, Plus, Minus, UserPlus, Shield, User as UserIcon, Link2, Bookmark, Sparkles
+  User, Lock, Database, Cloud, ChevronRight, Save, Download, Upload, LogOut, X, Info, CheckCircle2, AlertCircle, Globe, Clock, Plus, Minus, UserPlus, Shield, User as UserIcon, Link2, Bookmark, Sparkles, Timer
 } from 'lucide-react'
 import { cn, Card, useToast, useAdjustedTime } from '../components/ui/JourneyUI'
 import { userApi, karakeepApi } from '../lib/api'
@@ -63,6 +63,7 @@ export default function SettingsView() {
           <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-300 ml-2">System</h3>
           <Card className="divide-y divide-slate-50 text-slate-900">
             <SettingsRow icon={<Link2 size={18} className="text-indigo-500" />} label="Share Manager" sub="Manage shared links" onClick={() => navigate('/shares')} />
+            <SettingsRow icon={<Timer size={18} className="text-emerald-500" />} label="Scheduled Tasks" sub="Manage automated tasks" onClick={() => navigate('/tasks')} />
             <SettingsRow icon={<Database size={18} className="text-amber-500" />} label="Maintenance" sub="Export/Import DB" onClick={() => setActiveModal('system')} />
           </Card>
         </div>
@@ -93,7 +94,8 @@ function AIModal({ user, onClose }: any) {
     provider: user?.ai_provider || 'openai', 
     base_url: user?.ai_base_url || 'https://api.openai.com/v1', 
     key: '', 
-    model: user?.ai_model || 'gpt-3.5-turbo' 
+    model: user?.ai_model || 'gpt-3.5-turbo',
+    language: user?.ai_language || 'zh'
   });
   const addToast = useToast(state => state.add)
   const mutation = useMutation({
@@ -155,11 +157,25 @@ function AIModal({ user, onClose }: any) {
                 onChange={e => setForm({ ...form, model: e.target.value })} 
             />
         </div>
+        <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">Summary Language</label>
+            <div className="relative">
+                <select 
+                    className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700 appearance-none border-2 border-transparent focus:border-purple-100 transition-all cursor-pointer"
+                    value={form.language}
+                    onChange={e => setForm({ ...form, language: e.target.value })}
+                >
+                    <option value="zh">中文</option>
+                    <option value="en">English</option>
+                </select>
+                <ChevronRight className="absolute right-6 top-1/2 -translate-y-1/2 rotate-90 text-slate-300 pointer-events-none" size={18} />
+            </div>
+        </div>
       </div>
       <button 
         onClick={() => {
             if (!form.key) return addToast('error', 'API Key required')
-            mutation.mutate({ provider: form.provider, base_url: form.base_url, api_key: form.key, model: form.model })
+            mutation.mutate({ provider: form.provider, base_url: form.base_url, api_key: form.key, model: form.model, language: form.language })
         }} 
         disabled={mutation.isPending} 
         className="w-full py-5 bg-purple-600 text-white rounded-[24px] font-black shadow-xl mt-8 disabled:opacity-50 text-xs uppercase tracking-widest active:scale-95 transition-all hover:bg-purple-700"

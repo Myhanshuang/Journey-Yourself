@@ -13,16 +13,21 @@ import { TaskList } from '@tiptap/extension-task-list'
 import { TaskItem } from '@tiptap/extension-task-item'
 import { MathExtension } from 'tiptap-math-extension'
 import { Markdown } from 'tiptap-markdown'
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import { common, createLowlight } from 'lowlight'
 import { Video } from './extensions/Video'
 import { Audio } from './extensions/Audio'
 import { Image } from './extensions/Image'
+import { Bookmark } from './extensions/Bookmark'
+
+const lowlight = createLowlight(common)
 import { useEffect, useState, useRef, useCallback, useImperativeHandle, forwardRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Bold, Italic, Underline as UnderlineIcon, List, 
   ImageIcon, Save, ArrowLeft, Book,
   Heading1, Heading2, Quote, Code, ListOrdered, MapPin, Smile, Cloud, Tag, Sun,
-  Table as TableIcon, Sigma, ListChecks, Video as VideoIcon, Music, Upload, Bookmark
+  Table as TableIcon, Sigma, ListChecks, Video as VideoIcon, Music, Upload, Bookmark as BookmarkIcon
 } from 'lucide-react'
 import { cn, useToast, ServiceSetupModal, useIsMobile } from './ui/JourneyUI'
 import { useQuery } from '@tanstack/react-query'
@@ -140,11 +145,17 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
       StarterKit.configure({ 
         heading: { levels: [1, 2, 3] },
         dropcursor: { color: '#6ebeea', width: 2 },
+        codeBlock: false, // 禁用默认 codeBlock，使用 CodeBlockLowlight
+      }),
+      CodeBlockLowlight.configure({
+        defaultLanguage: 'plaintext',
+        lowlight,
       }),
       Gapcursor,
       Image,
       Video,
       Audio,
+      Bookmark,
       Underline, 
       CharacterCount, 
       Markdown,
@@ -419,7 +430,7 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
             <HeaderButton icon={<MapPin size={14}/>} label={location ? location.name : 'Place'} onClick={() => handleServiceClick('geo', 'location')} highlight={!!location} />
             <HeaderButton icon={<Tag size={14}/>} label={tags.length > 0 ? `${tags.length} Tags` : 'Tags'} onClick={() => setActiveModal('tags')} highlight={tags.length > 0} />
             <HeaderButton icon={<ImageIcon size={14}/>} label="Photos" onClick={() => handleServiceClick('immich', 'immich')} className="bg-[#232f55] text-white hover:bg-[#232f55]/90" />
-            <HeaderButton icon={<Bookmark size={14}/>} label="Karakeep" onClick={() => handleServiceClick('karakeep', 'karakeep')} className="bg-pink-500 text-white hover:bg-pink-600" />
+            <HeaderButton icon={<BookmarkIcon size={14}/>} label="Karakeep" onClick={() => handleServiceClick('karakeep', 'karakeep')} className="bg-pink-500 text-white hover:bg-pink-600" />
           </div>
         </div>
 
@@ -442,6 +453,7 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
         <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} icon={<Heading1 size={18} />} />
         <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} icon={<List size={18} />} />
         <ToolbarButton onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive('taskList')} icon={<ListChecks size={18} />} />
+        <ToolbarButton onClick={() => editor.chain().focus().toggleCodeBlock().run()} active={editor.isActive('codeBlock')} icon={<Code size={18} />} title="Code Block" />
         <ToolbarButton onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} icon={<TableIcon size={18} />} />
         <ToolbarButton onClick={() => editor.chain().focus().insertContent(' $\\alpha$ ').run()} icon={<Sigma size={18}/>} />
         <div className="w-px h-6 bg-[#232f55]/10 mx-1 md:mx-2" />
@@ -532,14 +544,15 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
         {activeModal === 'karakeep' && (
           <KarakeepPicker 
             onSelect={(bookmark: any) => {
-              const content = `
-                <blockquote>
-                  <p><a href="${bookmark.url}" target="_blank" rel="noopener noreferrer"><strong>${bookmark.title || bookmark.url}</strong></a></p>
-                  ${bookmark.description ? `<p>${bookmark.description}</p>` : ''}
-                  ${bookmark.image_url ? `<img src="${bookmark.image_url}" alt="${bookmark.title}" style="max-height: 200px; border-radius: 8px; margin-top: 8px;" />` : ''}
-                </blockquote>
-              `
-              editor.chain().focus().insertContent(content).run()
+              editor.chain().focus().insertContent({
+                type: 'bookmark',
+                attrs: {
+                  url: bookmark.url,
+                  title: bookmark.title || bookmark.url,
+                  description: bookmark.description || '',
+                  image: bookmark.image_url || '',
+                }
+              }).run()
               setActiveModal(null)
             }}
             onClose={() => setActiveModal(null)} 
