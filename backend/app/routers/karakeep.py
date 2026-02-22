@@ -18,8 +18,21 @@ def get_karakeep_headers(user: User) -> dict:
 def get_karakeep_base_url(user: User) -> str:
     return f"{user.karakeep_url.rstrip('/')}"
 
+def transform_bookmark(bookmark: dict) -> dict:
+    """将 Karakeep 原始格式转换为前端期望的简化格式"""
+    content = bookmark.get("content", {})
+    return {
+        "id": bookmark.get("id"),
+        "title": bookmark.get("title") or content.get("title") or content.get("url"),
+        "description": content.get("description"),
+        "url": content.get("url"),
+        "image_url": content.get("imageUrl"),
+        "created_at": bookmark.get("createdAt"),
+        "tags": bookmark.get("tags", []),
+    }
+
 @router.get("/bookmarks")
-async def list_bookmarks(page: int = 1, per_page: int = 20, current_user: User = Depends(get_current_user)):
+async def list_bookmarks(limit: int = 20, cursor: str = None, current_user: User = Depends(get_current_user)):
     headers = get_karakeep_headers(current_user)
     if not headers: 
         raise HTTPException(status_code=400, detail="Karakeep not configured")
@@ -27,18 +40,27 @@ async def list_bookmarks(page: int = 1, per_page: int = 20, current_user: User =
     
     async with httpx.AsyncClient(headers=headers, verify=False, timeout=30.0) as client:
         try:
-            # Assuming endpoint is /api/bookmarks based on common REST patterns
-            # Note: We use the full URL constructed from base_url + endpoint
-            url = f"{base_url}/api/bookmarks"
-            resp = await client.get(url, params={"page": page, "per_page": per_page})
+            # Karakeep API uses /api/v1/bookmarks with cursor-based pagination
+            url = f"{base_url}/api/v1/bookmarks"
+            params = {"limit": limit}
+            if cursor:
+                params["cursor"] = cursor
+            
+            resp = await client.get(url, params=params)
             
             if resp.status_code == 200:
-                return resp.json()
+                data = resp.json()
+                # Transform bookmarks to simplified format
+                transformed_bookmarks = [transform_bookmark(b) for b in data.get("bookmarks", [])]
+                return {
+                    "bookmarks": transformed_bookmarks,
+                    "nextCursor": data.get("nextCursor")
+                }
             elif resp.status_code == 401:
                 raise HTTPException(status_code=401, detail="Karakeep authentication failed")
             else:
                 print(f"Karakeep Error: {resp.status_code} {resp.text}")
-                return {"data": [], "meta": {"total": 0}} # Return empty struct on error to avoid breaking frontend
-        except Exception as e:
+                return {"bookmarks": [], "nextCursor": None}
+        except httpx.HTTPError as e:
              print(f"Karakeep Connection Error: {e}")
              raise HTTPException(status_code=500, detail="Failed to connect to Karakeep")

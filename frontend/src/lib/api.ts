@@ -95,7 +95,8 @@ export const amapApi = {
 }
 
 export const karakeepApi = {
-  listBookmarks: async (page: number = 1) => (await api.get('/proxy/karakeep/bookmarks', { params: { page } })).data
+  listBookmarks: async (limit: number = 20, cursor?: string) => 
+    (await api.get('/proxy/karakeep/bookmarks', { params: { limit, ...(cursor && { cursor }) } })).data
 }
 
 export const immichApi = {

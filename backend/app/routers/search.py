@@ -56,18 +56,25 @@ async def search_unified(
             base_url = current_user.karakeep_url.rstrip('/')
             
             async with httpx.AsyncClient(verify=False, timeout=10.0) as client:
-                # Try simple list and filter (most robust for unknown API)
-                resp = await client.get(f"{base_url}/api/bookmarks", headers=headers, params={"limit": 100})
+                # Karakeep uses /api/v1/bookmarks with cursor pagination
+                resp = await client.get(f"{base_url}/api/v1/bookmarks", headers=headers, params={"limit": 100})
                 if resp.status_code == 200:
                     data = resp.json()
-                    all_b = data if isinstance(data, list) else data.get('data', [])
+                    all_b = data.get('bookmarks', [])
                     
                     filtered = []
                     for b in all_b:
+                        # Extract content for search (Karakeep stores title/description in content object)
+                        content = b.get('content', {})
+                        b_title = b.get('title') or content.get('title') or ''
+                        b_desc = content.get('description') or ''
+                        b_url = content.get('url') or ''
+                        
                         match = False
                         # Filter by Query
                         if q:
-                            if q.lower() in (b.get('title') or '').lower() or q.lower() in (b.get('description') or '').lower():
+                            q_lower = q.lower()
+                            if q_lower in b_title.lower() or q_lower in b_desc.lower() or q_lower in b_url.lower():
                                 match = True
                         
                         # Filter by Tag (AND logic if both present)
@@ -92,9 +99,27 @@ async def search_unified(
                         
                         if (q or tag) and tag_match:
                              if not q or match:
-                                 filtered.append(b)
+                                 # Transform to simplified format for frontend
+                                 filtered.append({
+                                     "id": b.get("id"),
+                                     "title": b_title,
+                                     "description": b_desc,
+                                     "url": b_url,
+                                     "image_url": content.get("imageUrl"),
+                                     "created_at": b.get("createdAt"),
+                                     "tags": b.get("tags", []),
+                                 })
                         elif not q and not tag:
-                             filtered.append(b) # No filters
+                             # No filters, transform and add
+                             filtered.append({
+                                 "id": b.get("id"),
+                                 "title": b_title,
+                                 "description": b_desc,
+                                 "url": b_url,
+                                 "image_url": content.get("imageUrl"),
+                                 "created_at": b.get("createdAt"),
+                                 "tags": b.get("tags", []),
+                             })
                              
                     results["bookmarks"] = filtered[:50]
         except Exception as e:

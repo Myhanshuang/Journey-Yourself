@@ -35,15 +35,15 @@ async def process_user_daily_summary(user_id: int):
             headers = {"Authorization": f"Bearer {karakeep_key}"}
             base_url = user.karakeep_url.rstrip('/')
             
-            # Fetch recent bookmarks
+            # Fetch recent bookmarks (Karakeep uses /api/v1/bookmarks)
             async with httpx.AsyncClient(verify=False, timeout=30.0) as client:
-                resp = await client.get(f"{base_url}/api/bookmarks", headers=headers, params={"limit": 50})
+                resp = await client.get(f"{base_url}/api/v1/bookmarks", headers=headers, params={"limit": 50})
                 if resp.status_code != 200:
                     print(f"Failed to fetch bookmarks for {user.username}: {resp.status_code}")
                     return
                 
                 data = resp.json()
-                bookmarks = data if isinstance(data, list) else data.get('data', [])
+                bookmarks = data.get('bookmarks', [])
                 
             # Filter for today (UTC) - Simplified logic: check if created_at is today
             today_str = datetime.now(timezone.utc).strftime('%Y-%m-%d')
@@ -99,6 +99,9 @@ async def process_user_daily_summary(user_id: int):
             
             ul = {"type": "bulletList", "content": []}
             for b in today_bookmarks:
+                content = b.get('content', {})
+                b_title = b.get('title') or content.get('title') or "Untitled"
+                b_url = content.get('url') or ''
                 li = {
                     "type": "listItem",
                     "content": [{
@@ -106,8 +109,8 @@ async def process_user_daily_summary(user_id: int):
                         "content": [
                             {
                                 "type": "text", 
-                                "text": b.get('title') or b.get('url') or "Untitled", 
-                                "marks": [{"type": "link", "attrs": {"href": b.get('url')}}]
+                                "text": b_title, 
+                                "marks": [{"type": "link", "attrs": {"href": b_url}}]
                             }
                         ]
                     }]
@@ -134,7 +137,15 @@ async def process_user_daily_summary(user_id: int):
 async def generate_ai_summary(user: User, bookmarks: list) -> str:
     if not user.ai_api_key: return None
     
-    links_text = "\n".join([f"- {b.get('title', 'No Title')}: {b.get('description', '')} ({b.get('url')})" for b in bookmarks])
+    # Extract data from Karakeep bookmark structure (content object contains title/description/url)
+    def get_bookmark_info(b):
+        content = b.get('content', {})
+        title = b.get('title') or content.get('title') or 'No Title'
+        desc = content.get('description') or ''
+        url = content.get('url') or ''
+        return f"- {title}: {desc} ({url})"
+    
+    links_text = "\n".join([get_bookmark_info(b) for b in bookmarks])
     prompt = f"""Please summarize the following bookmarks I added today into a cohesive reading summary. Highlight key topics and interesting points.
 
 {links_text}"""

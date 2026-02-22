@@ -11,22 +11,15 @@ export default function KarakeepPicker({ onSelect, onClose }: any) {
     data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading 
   } = useInfiniteQuery({
     queryKey: ['karakeep', 'bookmarks'],
-    queryFn: ({ pageParam = 1 }) => karakeepApi.listBookmarks(pageParam),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, allPages) => {
-        // Handle array response
-        if (Array.isArray(lastPage)) {
-             return lastPage.length === 20 ? allPages.length + 1 : undefined
-        }
-        // Handle object response with data array
-        if (lastPage?.data && Array.isArray(lastPage.data)) {
-             return lastPage.data.length === 20 ? allPages.length + 1 : undefined;
-        }
-        return undefined;
+    queryFn: ({ pageParam = undefined }) => karakeepApi.listBookmarks(20, pageParam),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => {
+        // Karakeep returns { bookmarks: [], nextCursor: string | null }
+        return lastPage?.nextCursor || undefined
     }
   })
 
-  const bookmarks = data?.pages.flatMap(page => Array.isArray(page) ? page : (page?.data || [])) || []
+  const bookmarks = data?.pages.flatMap(page => page?.bookmarks || []) || []
 
   const lastElementRef = useCallback((node: any) => {
     if (isLoading || isFetchingNextPage) return

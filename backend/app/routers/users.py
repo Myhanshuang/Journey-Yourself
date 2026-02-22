@@ -139,8 +139,8 @@ async def update_karakeep(karakeep_in: KarakeepUpdate, current_user: User = Depe
     async with httpx.AsyncClient(verify=False) as client:
         try:
             # Verify endpoint - try to list bookmarks to verify token
-            # Adjust endpoint if needed.
-            resp = await client.get(f"{base_url}/api/bookmarks", headers=headers, params={"limit": 1}, timeout=8.0)
+            # Karakeep uses /api/v1/bookmarks
+            resp = await client.get(f"{base_url}/api/v1/bookmarks", headers=headers, params={"limit": 1}, timeout=8.0)
             if resp.status_code == 200 or resp.status_code == 404: # 404 might mean no bookmarks but auth worked? No, usually 401/403 for auth fail.
                 # Actually, if it's 200, we are good.
                 print(f"DEBUG: Karakeep verification successful for {current_user.username}")
