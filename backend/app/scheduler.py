@@ -137,13 +137,7 @@ def schedule_all_tasks():
                     replace_existing=True
                 )
                 
-                # 更新下次运行时间
-                job = scheduler.get_job(task.name)
-                if job:
-                    task.next_run = job.next_run_time
-                    session.add(task)
-                
-                logger.info(f"[Scheduler] Scheduled task: {task.name}, next run: {job.next_run_time if job else 'N/A'}")
+                logger.info(f"[Scheduler] Scheduled task: {task.name}")
                 
             except Exception as e:
                 logger.error(f"[Scheduler] Failed to schedule task {task.name}: {e}")
@@ -163,7 +157,30 @@ def start_scheduler():
     
     logger.info("[Scheduler] Starting scheduler")
     scheduler.start()
+    
+    # 启动后更新下次运行时间
+    update_next_run_times()
+    
     logger.info("[Scheduler] Scheduler started")
+
+
+def update_next_run_times():
+    """
+    调度器启动后更新所有任务的下次运行时间
+    """
+    with Session(engine) as session:
+        for task_name in TASK_REGISTRY.keys():
+            try:
+                job = scheduler.get_job(task_name)
+                if job and hasattr(job, 'next_run_time') and job.next_run_time:
+                    task = session.exec(select(Task).where(Task.name == task_name)).first()
+                    if task:
+                        task.next_run = job.next_run_time
+                        session.add(task)
+                        logger.info(f"[Scheduler] Updated next_run for {task_name}: {job.next_run_time}")
+            except Exception as e:
+                logger.warning(f"[Scheduler] Could not update next_run for {task_name}: {e}")
+        session.commit()
 
 
 def shutdown_scheduler():
@@ -214,8 +231,13 @@ def reschedule_task(task_name: str):
                     replace_existing=True
                 )
                 
-                job = scheduler.get_job(task_name)
-                if job:
-                    task.next_run = job.next_run_time
-                    session.add(task)
-                    session.commit()
+                # 更新下次运行时间（调度器已启动时）
+                try:
+                    job = scheduler.get_job(task_name)
+                    if job and hasattr(job, 'next_run_time') and job.next_run_time:
+                        task.next_run = job.next_run_time
+                        session.add(task)
+                except Exception as e:
+                    logger.warning(f"[Scheduler] Could not update next_run for {task_name}: {e}")
+                
+                session.commit()
