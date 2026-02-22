@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   User, Lock, Database, Cloud, ChevronRight, Save, Download, Upload, LogOut, X, Info, CheckCircle2, AlertCircle, Globe, Clock, Plus, Minus, UserPlus, Shield, User as UserIcon, Link2, Bookmark, Sparkles, Timer
 } from 'lucide-react'
-import { cn, Card, useToast, useAdjustedTime, ConfigSelect, SelectOption } from '../components/ui/JourneyUI'
+import { cn, Card, useToast, useAdjustedTime, ConfigSelect } from '../components/ui/JourneyUI'
+import type { SelectOption } from '../components/ui/JourneyUI'
 import { userApi, karakeepApi } from '../lib/api'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
