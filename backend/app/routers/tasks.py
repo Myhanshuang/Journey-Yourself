@@ -134,11 +134,10 @@ async def process_user_daily_summary(user_id: int):
 async def generate_ai_summary(user: User, bookmarks: list) -> str:
     if not user.ai_api_key: return None
     
-    links_text = "
-".join([f"- {b.get('title', 'No Title')}: {b.get('description', '')} ({b.get('url')})" for b in bookmarks])
-    prompt = f"Please summarize the following bookmarks I added today into a cohesive reading summary. Highlight key topics and interesting points.
+    links_text = "\n".join([f"- {b.get('title', 'No Title')}: {b.get('description', '')} ({b.get('url')})" for b in bookmarks])
+    prompt = f"""Please summarize the following bookmarks I added today into a cohesive reading summary. Highlight key topics and interesting points.
 
-{links_text}"
+{links_text}"""
     
     api_key = decrypt_data(user.ai_api_key)
     base_url = user.ai_base_url or "https://api.openai.com/v1"
