@@ -5,7 +5,20 @@ import { cn, Card } from '../ui/JourneyUI'
 import api, { immichApi } from '../../lib/api'
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query'
 
-const getThumbUrl = (assetId: string) => `/api/proxy/immich/asset/${assetId}?token=${localStorage.getItem('token')}`
+// 获取完整的API URL，移动端需要使用存储的server_url
+const getApiBaseUrl = () => {
+  const storedUrl = localStorage.getItem('server_url')
+  if (storedUrl) {
+    return `${storedUrl.replace(/\/$/, '')}/api`
+  }
+  return '/api'
+}
+
+// 使用签名URL获取缩略图（asset对象包含sig字段）
+const getThumbUrl = (assetId: string, sig: string) => {
+  const baseUrl = getApiBaseUrl()
+  return `${baseUrl}/proxy/immich/asset/${assetId}?sig=${sig}`
+}
 
 export default function ImmichPicker({ onSelect, onClose }: any) {
   const [activeTab, setActiveTab] = useState<'all' | 'albums'>('all')
@@ -87,19 +100,22 @@ export default function ImmichPicker({ onSelect, onClose }: any) {
       <div className="flex-1 overflow-y-auto p-10 no-scrollbar pb-32">
          {activeTab === 'all' ? (
             <div className="space-y-10">
-              <AssetGrid assets={allPhotos} onSelect={id => onSelect(id, importMode)} />
+              <AssetGrid assets={allPhotos} onSelect={(id:string, sig:string) => onSelect(id, sig, importMode)} />
               <div ref={lastElementRef} className="h-20 flex items-center justify-center">
                  {(hasNextPage || isFetchingNextPage) && <Loader2 className="animate-spin text-indigo-500" size={32}/>}
               </div>
             </div>
          ) : selectedAlbum ? (
-            <AssetGrid assets={albumAssets} onSelect={id => onSelect(id, importMode)} loading={loadingAlbumAssets} />
+            <AssetGrid assets={albumAssets} onSelect={(id:string, sig:string) => onSelect(id, sig, importMode)} loading={loadingAlbumAssets} />
          ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
                {loadingAlbums ? [1,2,3,4].map(i => <div key={i} className="aspect-[4/5] bg-slate-50 rounded-[32px] animate-pulse" />) :
                 albums.map((album: any) => (
                  <Card key={album.id} className="aspect-[4/5] cursor-pointer group relative overflow-hidden" onClick={() => setSelectedAlbum(album)}>
-                    <img src={getThumbUrl(album.albumThumbnailAssetId)} className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-1000" />
+                    <img 
+                      src={album.albumThumbnailSig ? getThumbUrl(album.albumThumbnailAssetId, album.albumThumbnailSig) : ''} 
+                      className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-1000" 
+                    />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-8">
                        <h5 className="text-white text-xl font-black tracking-tight">{album.albumName}</h5>
                        <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">{album.assetCount} Items</p>
@@ -122,16 +138,17 @@ function AssetGrid({ assets, onSelect, loading }: any) {
          if (!id) return null
          const isVideo = asset.type === 'VIDEO'
          const duration = asset.duration
+         const sig = asset.sig
          
          return (
            <motion.button 
              key={id} 
              whileHover={{ scale: 1.02 }} 
              whileTap={{ scale: 0.98 }} 
-             onClick={() => onSelect(id)} 
+             onClick={() => onSelect(id, sig)} 
              className="aspect-square rounded-[28px] overflow-hidden bg-slate-50 border border-slate-100 group relative"
            >
-              <img src={getThumbUrl(id)} className="w-full h-full object-cover" loading="lazy" />
+              <img src={getThumbUrl(id, sig)} className="w-full h-full object-cover" loading="lazy" />
               
               {/* 视频标识 */}
               {isVideo && (

@@ -1,15 +1,34 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 import httpx
 import uuid
 import os
+import hashlib
+import hmac
 from app.auth import get_current_user
 from app.models import User
 from app.security import decrypt_data
+from app.config import settings
 
 router = APIRouter(prefix="/api/proxy/immich", tags=["immich-proxy"])
 
 UPLOAD_DIR = "data/uploads"
+
+
+def generate_asset_signature(asset_id: str) -> str:
+    """生成资源签名（永不过期）"""
+    message = f"immich:{asset_id}"
+    return hmac.new(
+        settings.SECRET_KEY.encode(),
+        message.encode(),
+        hashlib.sha256
+    ).hexdigest()[:32]
+
+
+def verify_asset_signature(asset_id: str, sig: str) -> bool:
+    """验证资源签名"""
+    expected = generate_asset_signature(asset_id)
+    return hmac.compare_digest(expected, sig)
 
 
 def get_immich_headers(user: User) -> dict:
@@ -36,7 +55,14 @@ async def list_albums(current_user: User = Depends(get_current_user)):
     
     async with httpx.AsyncClient(base_url=base_url, headers=headers, verify=False, timeout=30.0) as client:
         resp = await client.get("/albums")
-        return resp.json() if resp.status_code == 200 else []
+        if resp.status_code == 200:
+            albums = resp.json()
+            # 为每个相册的封面添加签名
+            for album in albums:
+                if album.get("albumThumbnailAssetId"):
+                    album["albumThumbnailSig"] = generate_asset_signature(album["albumThumbnailAssetId"])
+            return albums
+        return []
 
 
 @router.get("/album/{album_id}/assets")
@@ -56,13 +82,14 @@ async def list_album_assets(album_id: str, current_user: User = Depends(get_curr
                 "type": a.get("type"),
                 "duration": a.get("duration"),
                 "originalFileName": a.get("originalFileName"),
+                "sig": generate_asset_signature(a.get("id")),
             } for a in assets]
         return []
 
 
 @router.get("/assets")
 async def list_immich_assets(page: int = 1, size: int = 50, current_user: User = Depends(get_current_user)):
-    """获取资产列表，包含 type 和 duration 字段"""
+    """获取资产列表，包含 type、duration 和签名"""
     headers = get_immich_headers(current_user)
     if not headers: return []
     base_url = get_immich_base_url(current_user)
@@ -78,13 +105,22 @@ async def list_immich_assets(page: int = 1, size: int = 50, current_user: User =
                 "type": a.get("type"),
                 "duration": a.get("duration"),
                 "originalFileName": a.get("originalFileName"),
+                "sig": generate_asset_signature(a.get("id")),
             } for a in items]
         return []
 
 
 @router.get("/asset/{asset_id}")
-async def proxy_asset(asset_id: str, current_user: User = Depends(get_current_user)):
-    """代理缩略图"""
+async def proxy_asset(
+    asset_id: str, 
+    sig: str = Query(...),
+    current_user: User = Depends(get_current_user)
+):
+    """代理缩略图 - 支持签名验证"""
+    # 优先验证签名，签名有效则无需检查用户配置
+    if not verify_asset_signature(asset_id, sig):
+        raise HTTPException(403, "Invalid signature")
+    
     headers = get_immich_headers(current_user)
     if not headers: raise HTTPException(404, "Immich not configured")
     base_url = get_immich_base_url(current_user)
@@ -122,8 +158,15 @@ async def get_asset_info(asset_id: str, current_user: User = Depends(get_current
 
 
 @router.get("/original/{asset_id}")
-async def proxy_original(asset_id: str, current_user: User = Depends(get_current_user)):
-    """代理原始图片 - 调用真正的原图 API"""
+async def proxy_original(
+    asset_id: str,
+    sig: str = Query(...),
+    current_user: User = Depends(get_current_user)
+):
+    """代理原始图片 - 支持签名验证"""
+    if not verify_asset_signature(asset_id, sig):
+        raise HTTPException(403, "Invalid signature")
+    
     headers = get_immich_headers(current_user)
     if not headers: raise HTTPException(404, "Immich not configured")
     base_url = get_immich_base_url(current_user)
@@ -138,8 +181,15 @@ async def proxy_original(asset_id: str, current_user: User = Depends(get_current
 
 
 @router.get("/video/{asset_id}")
-async def proxy_video(asset_id: str, current_user: User = Depends(get_current_user)):
-    """代理视频播放流"""
+async def proxy_video(
+    asset_id: str,
+    sig: str = Query(...),
+    current_user: User = Depends(get_current_user)
+):
+    """代理视频播放流 - 支持签名验证"""
+    if not verify_asset_signature(asset_id, sig):
+        raise HTTPException(403, "Invalid signature")
+    
     headers = get_immich_headers(current_user)
     if not headers: raise HTTPException(404, "Immich not configured")
     base_url = get_immich_base_url(current_user)
@@ -155,7 +205,7 @@ async def proxy_video(asset_id: str, current_user: User = Depends(get_current_us
 
 @router.post("/import")
 async def import_asset(asset_id: str, mode: str = "link", current_user: User = Depends(get_current_user)):
-    """导入资产：返回类型信息供前端决定如何渲染"""
+    """导入资产：返回带签名的URL"""
     headers = get_immich_headers(current_user)
     if not headers: raise HTTPException(404, "Immich not configured")
     base_url = get_immich_base_url(current_user)
@@ -171,19 +221,24 @@ async def import_asset(asset_id: str, mode: str = "link", current_user: User = D
         original_mime = asset_info.get("originalMimeType", "image/jpeg")
         duration = asset_info.get("duration")
         
+        # 生成签名
+        sig = generate_asset_signature(asset_id)
+        
         if mode == "link":
             if asset_type == "VIDEO":
                 return {
-                    "url": f"/api/proxy/immich/video/{asset_id}",
+                    "url": f"/api/proxy/immich/video/{asset_id}?sig={sig}",
                     "type": "video",
                     "mediaType": "video",
-                    "duration": duration
+                    "duration": duration,
+                    "signature": sig
                 }
             else:
                 return {
-                    "url": f"/api/proxy/immich/original/{asset_id}",
+                    "url": f"/api/proxy/immich/original/{asset_id}?sig={sig}",
                     "type": "image",
-                    "mediaType": "image"
+                    "mediaType": "image",
+                    "signature": sig
                 }
         
         # copy 模式：下载原文件

@@ -127,6 +127,7 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
   const [unconfiguredType, setUnconfiguredType] = useState<'immich' | 'karakeep' | 'geo' | null>(null)
   const [realWordCount, setRealWordCount] = useState(0)
   const [uploading, setUploading] = useState<'video' | 'audio' | 'image' | null>(null)
+  const [, forceUpdate] = useState(0)  // 用于强制更新编辑器状态
   const addToast = useToast(state => state.add)
   
   const videoInputRef = useRef<HTMLInputElement>(null)
@@ -168,6 +169,7 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
     ],
     content: cacheToRestore?.content || initialData?.content || { type: 'doc', content: [{ type: 'paragraph' }] },
     onUpdate: ({ editor }) => setRealWordCount(countWordsCJK(editor.getText())),
+    onTransaction: () => forceUpdate(v => v + 1),  // 格式变化时强制重新渲染
     editorProps: { 
       attributes: { class: cn('prose max-w-none focus:outline-none min-h-[600px] pb-40 leading-relaxed text-[#232f55]', isMobile ? 'text-base' : 'text-lg') } 
     },
@@ -519,14 +521,19 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
         {activeModal === 'weather' && <WeatherModal currentData={weather} onSelect={(w:any) => { setWeather(w); setActiveModal(null); }} onClose={() => setActiveModal(null)} />}
         {activeModal === 'immich' && (
           <ImmichPicker 
-            onSelect={async (assetId:string, mode:any) => {
+            onSelect={async (assetId:string, sig: string, mode:any) => {
               try {
                 const result = await immichApi.importAsset(assetId, mode)
-                const token = localStorage.getItem('token')
+                const baseUrl = (() => {
+                  const storedUrl = localStorage.getItem('server_url')
+                  return storedUrl ? `${storedUrl.replace(/\/$/, '')}/api` : '/api'
+                })()
+                
+                // link模式使用签名URL，copy模式使用返回的URL
                 const finalUrl = mode === 'link' 
                   ? (result.mediaType === 'video' 
-                      ? `/api/proxy/immich/video/${assetId}?token=${token}` 
-                      : `/api/proxy/immich/original/${assetId}?token=${token}`)
+                      ? `${baseUrl}/proxy/immich/video/${assetId}?sig=${result.signature}` 
+                      : `${baseUrl}/proxy/immich/original/${assetId}?sig=${result.signature}`)
                   : result.url
                 
                 // 根据媒体类型插入不同的元素
@@ -572,5 +579,5 @@ function HeaderButton({ icon, label, onClick, highlight, className }: any) {
 }
 
 function ToolbarButton({ onClick, active, icon, highlight, title }: any) {
-  return <button onMouseDown={e=>e.preventDefault()} onClick={onClick} title={title} className={cn("p-2 md:p-2.5 rounded-xl transition-all flex items-center justify-center border border-transparent shrink-0", active ? 'bg-white shadow-sm text-[#6ebeea]' : highlight ? 'text-[#6ebeea]' : 'text-[#232f55]/40 hover:text-[#232f55] hover:bg-white/50')}>{icon}</button>
+  return <button onMouseDown={e=>e.preventDefault()} onClick={onClick} title={title} className={cn("p-2 md:p-2.5 rounded-xl transition-all flex items-center justify-center border border-transparent shrink-0 active:scale-95", active ? 'bg-white shadow-sm text-[#6ebeea]' : highlight ? 'text-[#6ebeea]' : 'text-[#232f55]/40 hover:text-[#232f55] hover:bg-white/50')}>{icon}</button>
 }

@@ -37,12 +37,19 @@ export const Video = Node.create<VideoOptions>({
   },
 
   renderHTML({ HTMLAttributes }) {
+    let src = HTMLAttributes.src
+    if (src && src.startsWith('/')) {
+      const serverUrl = localStorage.getItem('server_url')
+      if (serverUrl) {
+         src = `${serverUrl.replace(/\/$/, '')}${src}`
+      }
+    }
     return [
       'div',
       { class: 'video-wrapper my-8' },
       [
         'video',
-        mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
+        mergeAttributes(this.options.HTMLAttributes, { ...HTMLAttributes, src }, {
           controls: 'controls',
           class: 'rounded-[32px] shadow-2xl w-full max-w-3xl mx-auto border border-white/50',
           style: 'max-height: 70vh;',
