@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, MapPin, Search as SearchIcon, Navigation, Loader2 } from 'lucide-react'
 import { amapApi } from '../../lib/api'
+import { Geolocation } from '@capacitor/geolocation'
 
 export default function LocationModal({ onSelect, onClose, currentSelection }: any) {
   const [q, setQ] = useState(''); 
@@ -18,20 +19,43 @@ export default function LocationModal({ onSelect, onClose, currentSelection }: a
     } catch (e) { console.error('POI Search Failed', e) } finally { setIsSearching(false) }
   }
 
-  // 核心修改：获取位置后填充列表，而非直接 select
-  const handleGetCurrent = () => {
-    if (!navigator.geolocation) return alert('Geolocation not supported');
+  // 使用 Capacitor Geolocation 获取位置，支持安卓权限请求
+  const handleGetCurrent = async () => {
     setIsLocating(true)
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      try { 
-        const locStr = `${pos.coords.longitude},${pos.coords.latitude}`
-        const pois = await amapApi.regeo(locStr)
-        
-        // 将获取到的周边 POI 放入列表，供用户挑选
-        setRes(Array.isArray(pois) ? pois : [])
-        if (pois.length === 0) alert('No nearby points found. Try manual search.')
-      } catch (err) { alert('Failed to resolve nearby address.') } finally { setIsLocating(false) }
-    }, (err) => { setIsLocating(false); alert(err.message); }, { timeout: 10000 })
+    try {
+      // 检查权限状态
+      let permStatus = await Geolocation.checkPermissions()
+      
+      // 如果没有权限，请求权限
+      if (permStatus.location !== 'granted' && permStatus.coarseLocation !== 'granted') {
+        permStatus = await Geolocation.requestPermissions()
+      }
+      
+      // 权限被拒绝（精确位置和粗略位置都没有）
+      if (permStatus.location !== 'granted' && permStatus.coarseLocation !== 'granted') {
+        alert('位置权限被拒绝，请在系统设置中允许应用访问位置')
+        setIsLocating(false)
+        return
+      }
+      
+      // 获取位置，启用高精度GPS定位
+      const pos = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,   // 使用GPS高精度定位
+        timeout: 30000,             // 30秒超时
+        maximumAge: 0               // 不使用缓存，获取实时位置
+      })
+      const locStr = `${pos.coords.longitude},${pos.coords.latitude}`
+      const pois = await amapApi.regeo(locStr, 'gps')
+      
+      // 将获取到的周边 POI 放入列表，供用户挑选
+      setRes(Array.isArray(pois) ? pois : [])
+      if (pois.length === 0) alert('No nearby points found. Try manual search.')
+    } catch (err: any) {
+      console.error('Location error:', err)
+      alert(err.message || 'Failed to get location')
+    } finally {
+      setIsLocating(false)
+    }
   }
 
   return (

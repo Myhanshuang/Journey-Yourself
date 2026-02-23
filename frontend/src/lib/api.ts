@@ -89,7 +89,8 @@ export const statsApi = {
 }
 
 export const amapApi = {
-  regeo: async (location: string) => (await api.get('/proxy/amap/regeo', { params: { location } })).data,
+  regeo: async (location: string, coordsys?: string) => 
+    (await api.get('/proxy/amap/regeo', { params: { location, ...(coordsys && { coordsys }) } })).data,
   search: async (keywords: string) => (await api.get('/proxy/amap/search', { params: { keywords } })).data,
   getWeather: async (city: string) => (await api.get('/proxy/amap/weather', { params: { city_code: city } })).data
 }

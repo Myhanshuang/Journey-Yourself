@@ -47,8 +47,24 @@ async def search_poi(keywords: str, current_user: User = Depends(get_current_use
                 return resp.json().get("pois", [])
             except: return []
 
+async def convert_coords(client: httpx.AsyncClient, api_key: str, location: str) -> str:
+    """将 GPS 坐标 (WGS-84) 转换为高德坐标 (GCJ-02)"""
+    resp = await client.get(
+        "https://restapi.amap.com/v3/assistant/coordinate/convert",
+        params={"key": api_key, "locations": location, "coordsys": "gps"}
+    )
+    data = resp.json()
+    if data.get("status") == "1" and data.get("locations"):
+        return data["locations"]
+    return location  # 转换失败时返回原坐标
+
+
 @router.get("/regeo")
-async def regeo(location: str, current_user: User = Depends(get_current_user)):
+async def regeo(
+    location: str, 
+    coordsys: str = Query(default="", description="原坐标系: gps 表示 WGS-84"),
+    current_user: User = Depends(get_current_user)
+):
     """逆地理编码：返回周边 POI 列表供用户选择"""
     api_key = get_user_geo_key(current_user)
     if not api_key: return []
@@ -56,6 +72,10 @@ async def regeo(location: str, current_user: User = Depends(get_current_user)):
     async with lock:
         async with httpx.AsyncClient() as client:
             try:
+                # 如果是 GPS 坐标，先转换为高德坐标
+                if coordsys == "gps":
+                    location = await convert_coords(client, api_key, location)
+                
                 resp = await client.get(
                     "https://restapi.amap.com/v3/geocode/regeo",
                     params={
