@@ -4,9 +4,9 @@
  * 导出所有 UI 组件和工具函数，保持向后兼容
  */
 
-import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronRight, Trash2, Loader2, Image as ImageIcon, MapPin, MoreHorizontal, Bookmark } from 'lucide-react'
-import { useState, useRef, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { ChevronRight, Trash2, Loader2 } from 'lucide-react'
+import { useMotionValue, useTransform } from 'framer-motion'
 
 // Re-export from new locations
 export { cn, getFirstImage, extractSnippet, getAssetUrl } from '../../lib/utils'
@@ -15,174 +15,21 @@ export { useToast, ToastContainer } from '../../hooks/useToast'
 export { useConfirm, GlobalConfirmModal } from '../../hooks/useConfirm'
 export { useAdjustedTime } from '../../hooks/useAdjustedTime'
 export { useIsMobile } from '../../hooks/useMobile'
+export { default as ServiceSetupModal } from '../modals/ServiceSetupModal'
+export { ConfigSelect, type SelectOption } from './custom-select'
+export { ActionMenu, type ActionItem } from './action-menu'
+export { Skeleton } from './skeleton'
+export { Card } from './card' // Use the new Card component
 
-// Import for local use
+// Import for local use (Legacy components that are still here for now)
 import { cn } from '../../lib/utils'
 import { journeySpring } from '../../lib/constants'
 import { getFirstImage, extractSnippet } from '../../lib/utils'
 import { useAdjustedTime } from '../../hooks/useAdjustedTime'
 import { useIsMobile } from '../../hooks/useMobile'
-import { useMotionValue, useTransform } from 'framer-motion'
 
-// --- Skeleton Component ---
-export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("skeleton-shimmer rounded-[32px] bg-slate-100/50", className)} />
-}
 
-// --- UI Components ---
-export interface ActionItem {
-  label: string
-  icon: React.ReactNode
-  onClick: () => void
-  variant?: 'default' | 'danger'
-}
-
-export function ActionMenu({ actions }: { actions: ActionItem[] }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  return (
-    <div className="relative" ref={menuRef}>
-      <button 
-        onClick={() => setIsOpen(!isOpen)} 
-        className={cn("p-3 rounded-2xl border border-slate-100 shadow-sm text-slate-400 hover:text-[#232f55] transition-colors bg-white", isOpen && "bg-slate-50 text-[#232f55]")}
-      >
-        <MoreHorizontal size={18} />
-      </button>
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className="absolute right-0 top-full mt-2 w-48 bg-white/90 backdrop-blur-xl rounded-[24px] shadow-2xl border border-white/50 overflow-hidden z-50 p-2 flex flex-col gap-1"
-          >
-            {actions.map((action, idx) => (
-              <button
-                key={idx}
-                onClick={() => { action.onClick(); setIsOpen(false) }}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-[16px] text-sm font-bold transition-all w-full text-left",
-                  action.variant === 'danger' 
-                    ? "text-red-500 hover:bg-red-50" 
-                    : "text-[#232f55] hover:bg-[#f2f4f2]"
-                )}
-              >
-                {action.icon}
-                {action.label}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
-
-// --- Select Option Type ---
-export type SelectOption = {
-  value: string
-  label: string
-}
-
-// --- Configurable Select Component ---
-export function ConfigSelect({ 
-  label, 
-  options, 
-  value, 
-  onChange,
-  theme = 'purple'
-}: { 
-  label: string
-  options: SelectOption[]
-  value: string
-  onChange: (v: string) => void
-  theme?: 'purple' | 'indigo' | 'emerald' | 'pink'
-}) {
-  const [isOpen, setIsOpen] = useState(false)
-  const selectRef = useRef<HTMLDivElement>(null)
-  const isMobile = useIsMobile()
-  
-  const themeStyles = {
-    purple: { bg: 'bg-purple-50', text: 'text-purple-600', hover: 'hover:bg-purple-100', ring: 'focus:ring-purple-100' },
-    indigo: { bg: 'bg-indigo-50', text: 'text-indigo-600', hover: 'hover:bg-indigo-100', ring: 'focus:ring-indigo-100' },
-    emerald: { bg: 'bg-emerald-50', text: 'text-emerald-600', hover: 'hover:bg-emerald-100', ring: 'focus:ring-emerald-100' },
-    pink: { bg: 'bg-pink-50', text: 'text-pink-600', hover: 'hover:bg-pink-100', ring: 'focus:ring-pink-100' }
-  }
-  const style = themeStyles[theme]
-  
-  const selectedOption = options.find(o => o.value === value)
-  
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (selectRef.current && !selectRef.current.contains(e.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  return (
-    <div className="space-y-2" ref={selectRef}>
-      <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">{label}</label>
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className={cn(
-            "w-full text-left rounded-2xl outline-none font-bold text-slate-700 border-2 border-transparent transition-all cursor-pointer flex items-center justify-between",
-            style.ring,
-            isMobile ? "px-5 py-3" : "px-6 py-4",
-            isOpen ? style.bg : "bg-slate-50"
-          )}
-        >
-          <span className={cn(isOpen && style.text)}>{selectedOption?.label || 'Select...'}</span>
-          <ChevronRight className={cn("transition-transform", isOpen ? "rotate-90" : "rotate-90", isOpen && style.text)} size={18} />
-        </button>
-        
-        <AnimatePresence>
-          {isOpen && (
-            <motion.div
-              initial={{ opacity: 0, y: -8, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.95 }}
-              transition={{ duration: 0.15 }}
-              className="absolute z-50 w-full mt-2 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 overflow-hidden p-2"
-            >
-              {options.map(opt => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => { onChange(opt.value); setIsOpen(false) }}
-                  className={cn(
-                    "w-full text-left px-5 py-3 rounded-xl font-bold transition-all",
-                    value === opt.value 
-                      ? cn(style.bg, style.text) 
-                      : cn("text-slate-600", style.hover)
-                  )}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </div>
-  )
-}
+// --- Legacy Components to be refactored or kept for specific logic ---
 
 export function DiaryItemCard({ diary, onClick, className, size = 'md', noHoverEffect = false }: any) {
   const bgImage = getFirstImage(diary.content)
@@ -261,6 +108,7 @@ export function SidebarNavItem({ icon, label, active, onClick, collapsed }: any)
   )
 }
 
+// Deprecated in favor of Button component, but kept for compatibility or aliasing
 export function ActionButton({ children, onClick, className, icon: Icon, loading }: any) {
   const isMobile = useIsMobile()
   return (
@@ -283,57 +131,4 @@ export function OptionButton({ children, onClick, active, icon: Icon, className 
 export function GlassHeader({ children, className }: any) {
   const isMobile = useIsMobile()
   return <header className={cn("flex items-center justify-between sticky top-0 z-20 bg-[#f2f4f2]/80 backdrop-blur-3xl", isMobile ? "h-14 px-6" : "h-14 px-16", className)}>{children}</header>
-}
-
-export function Card({ children, className, onClick, ...props }: any) {
-  return (
-    <motion.div
-      whileHover={onClick ? { y: -4 } : {}}
-      whileTap={onClick ? { scale: 0.99 } : {}}
-      onClick={onClick}
-      className={cn("bg-white/90 shadow-[0_20px_40px_rgba(35,47,85,0.04)] rounded-[40px] overflow-hidden", onClick && "cursor-pointer", className)}
-      {...props}
-    >
-      {children}
-    </motion.div>
-  )
-}
-
-export function ServiceSetupModal({ type, onClose }: { type: 'immich' | 'geo' | 'karakeep', onClose: () => void }) {
-  const isMobile = useIsMobile()
-  const config = {
-    immich: {
-      icon: <ImageIcon size={40} />,
-      title: "Immich Required",
-      desc: "Connect your Immich instance in Settings to access your personal photo library directly.",
-    },
-    geo: {
-      icon: <MapPin size={40} />,
-      title: "Location Services",
-      desc: "Configure your Amap API Key in Settings to enable smart location tagging and weather updates.",
-    },
-    karakeep: {
-      icon: <Bookmark size={40} />,
-      title: "Karakeep Required",
-      desc: "Connect your Karakeep account in Settings to access your bookmarks directly.",
-    }
-  }[type]
-
-  return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/20 backdrop-blur-md p-4">
-      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className={cn("bg-white w-full text-center shadow-2xl border border-white", isMobile ? "p-6 rounded-[32px] max-w-xs" : "p-10 rounded-[48px] max-w-sm")}>
-        <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-3xl mx-auto flex items-center justify-center mb-6">
-          {config?.icon}
-        </div>
-        <h3 className="text-2xl font-black text-[#232f55] tracking-tight mb-2">{config?.title}</h3>
-        <p className="text-slate-400 font-medium text-sm leading-relaxed mb-8">
-          {config?.desc}
-        </p>
-        <div className="flex flex-col gap-3">
-          <button onClick={onClose} className="w-full py-4 bg-[#232f55] text-white rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all">I'll do it later</button>
-          <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Go to Settings {">"} Integrations</p>
-        </div>
-      </motion.div>
-    </div>
-  )
 }

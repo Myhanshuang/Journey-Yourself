@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  User, Lock, Database, Cloud, ChevronRight, Save, Download, Upload, LogOut, X, Info, CheckCircle2, AlertCircle, Globe, Clock, Plus, Minus, UserPlus, Shield, User as UserIcon, Link2, Bookmark, Sparkles, Timer
+  User, Lock, Database, Cloud, ChevronRight, Download, Upload, LogOut, Globe, Clock, Plus, Minus, UserPlus, Shield, User as UserIcon, Link2, Bookmark, Sparkles, Timer
 } from 'lucide-react'
-import { cn, Card, useToast, useAdjustedTime, ConfigSelect } from '../components/ui/JourneyUI'
-import type { SelectOption } from '../components/ui/JourneyUI'
-import { userApi, karakeepApi } from '../lib/api'
+import { cn, Card, useToast, ConfigSelect } from '../components/ui/JourneyUI'
+import { userApi } from '../lib/api'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
+import { SelectionModal } from '../components/ui/selection-modal'
+import { Input } from '../components/ui/input'
+import { Typography } from '../components/ui/typography'
+import { Button } from '../components/ui/button'
 
 export default function SettingsView() {
   const navigate = useNavigate()
@@ -24,7 +27,7 @@ export default function SettingsView() {
   if (isLoading) return <div className="p-20 text-slate-400 font-black animate-pulse uppercase tracking-widest text-xs text-slate-900">Loading Settings...</div>
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="py-12 max-w-[700px] mx-auto space-y-12 pb-32 text-slate-900">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="py-12 max-w-[700px] mx-auto space-y-12 pb-32 text-slate-900 px-4 md:px-0">
       <header className="space-y-2 text-slate-900">
         <h2 className="text-5xl md:text-6xl font-black tracking-tighter">Settings</h2>
         <p className="text-xl text-slate-400 font-medium italic">Your private sanctuary, secured.</p>
@@ -33,7 +36,7 @@ export default function SettingsView() {
       <div className="space-y-10">
         <div className="space-y-4">
           <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-300 ml-2">Personal</h3>
-          <Card className="divide-y divide-slate-50 text-slate-900">
+          <Card className="divide-y divide-slate-50 text-slate-900" padding="none">
             <SettingsRow icon={<User size={18} />} label="Rename Profile" sub={user?.username} onClick={() => setActiveModal('profile')} />
             <SettingsRow icon={<Lock size={18} />} label="Account Security" sub="Update password" onClick={() => setActiveModal('password')} />
             <SettingsRow icon={<Globe size={18} />} label="Timezone" sub={user?.timezone || 'UTC'} onClick={() => setActiveModal('timezone')} />
@@ -44,7 +47,7 @@ export default function SettingsView() {
         {user?.role === 'admin' && (
           <div className="space-y-4">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-indigo-400 ml-2">Administration</h3>
-            <Card className="divide-y divide-slate-50 text-slate-900">
+            <Card className="divide-y divide-slate-50 text-slate-900" padding="none">
               <SettingsRow icon={<UserPlus size={18} className="text-indigo-500" />} label="Provision Account" sub="Add new user or administrator" onClick={() => setActiveModal('createuser')} />
             </Card>
           </div>
@@ -52,7 +55,7 @@ export default function SettingsView() {
 
         <div className="space-y-4">
           <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-300 ml-2">Integrations</h3>
-          <Card className="divide-y divide-slate-50 text-slate-900">
+          <Card className="divide-y divide-slate-50 text-slate-900" padding="none">
             <SettingsRow icon={<Cloud size={18} className={cn(user?.has_immich_key ? "text-emerald-500" : "text-indigo-500")} />} label="Immich Library" sub={user?.has_immich_key ? "Connected" : "Not Configured"} onClick={() => setActiveModal('immich')} />
             <SettingsRow icon={<Bookmark size={18} className={cn(user?.has_karakeep_key ? "text-emerald-500" : "text-pink-500")} />} label="Karakeep Bookmarks" sub={user?.has_karakeep_key ? "Connected" : "Not Configured"} onClick={() => setActiveModal('karakeep')} />
             <SettingsRow icon={<Sparkles size={18} className={cn(user?.has_ai_key ? "text-emerald-500" : "text-purple-500")} />} label="AI Assistant" sub={user?.has_ai_key ? "Connected" : "Not Configured"} onClick={() => setActiveModal('ai')} />
@@ -62,7 +65,7 @@ export default function SettingsView() {
 
         <div className="space-y-4">
           <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-300 ml-2">System</h3>
-          <Card className="divide-y divide-slate-50 text-slate-900">
+          <Card className="divide-y divide-slate-50 text-slate-900" padding="none">
             <SettingsRow icon={<Link2 size={18} className="text-indigo-500" />} label="Share Manager" sub="Manage shared links" onClick={() => navigate('/shares')} />
             <SettingsRow icon={<Timer size={18} className="text-emerald-500" />} label="Scheduled Tasks" sub="Manage automated tasks" onClick={() => navigate('/tasks')} />
             <SettingsRow icon={<Database size={18} className="text-amber-500" />} label="Maintenance" sub="Export/Import DB" onClick={() => setActiveModal('system')} />
@@ -90,6 +93,11 @@ export default function SettingsView() {
   )
 }
 
+// Reusable Styles for Settings Modal Confirm Buttons
+const confirmBtnClass = "w-full py-5 rounded-[24px] font-black shadow-xl mt-8 disabled:opacity-50 text-xs uppercase tracking-widest active:scale-95 transition-all"
+// Light/Pale Confirm Button Style
+const lightConfirmBtnClass = "bg-indigo-50 text-indigo-600 hover:bg-indigo-100 shadow-none"
+
 function AIModal({ user, onClose }: any) {
   const [form, setForm] = useState({ 
     provider: user?.ai_provider || 'openai', 
@@ -111,22 +119,30 @@ function AIModal({ user, onClose }: any) {
     }
   })
 
-  // AI Provider 配置 - 可扩展
-  const AI_PROVIDERS: { value: string; label: string }[] = [
+  const AI_PROVIDERS = [
     { value: 'openai', label: 'OpenAI' },
     { value: 'anthropic', label: 'Anthropic' },
     { value: 'ollama', label: 'Ollama (Local)' },
     { value: 'other', label: 'Other (OpenAI Compatible)' },
   ]
   
-  // AI 摘要语言配置 - 可扩展
-  const AI_LANGUAGES: { value: string; label: string }[] = [
+  const AI_LANGUAGES = [
     { value: 'zh', label: '中文' },
     { value: 'en', label: 'English' },
   ]
 
   return (
-    <ModalWrapper title="AI Assistant" onClose={onClose}>
+    <SelectionModal 
+        isOpen={true} onClose={onClose} 
+        title="AI Assistant" 
+        onConfirm={() => {
+            if (!form.key) return addToast('error', 'API Key required')
+            mutation.mutate({ provider: form.provider, base_url: form.base_url, api_key: form.key, model: form.model, language: form.language })
+        }}
+        confirmLabel={mutation.isPending ? 'Verifying...' : 'Verify & Enable'}
+        loading={mutation.isPending}
+        className="md:max-w-md md:mx-auto"
+    >
       <div className="space-y-4">
         <ConfigSelect 
           label="Provider"
@@ -136,18 +152,16 @@ function AIModal({ user, onClose }: any) {
           theme="purple"
         />
         <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">Base URL</label>
-            <input 
-                className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700 focus:ring-2 focus:ring-purple-100 transition-all" 
+            <Typography variant="label" className="ml-2">Base URL</Typography>
+            <Input 
                 placeholder="e.g. https://api.openai.com/v1" 
                 value={form.base_url} 
                 onChange={e => setForm({ ...form, base_url: e.target.value })} 
             />
         </div>
         <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">API Key</label>
-            <input 
-                className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700 focus:ring-2 focus:ring-purple-100 transition-all" 
+            <Typography variant="label" className="ml-2">API Key</Typography>
+            <Input 
                 type="password" 
                 placeholder="Paste your API Key" 
                 value={form.key} 
@@ -155,9 +169,8 @@ function AIModal({ user, onClose }: any) {
             />
         </div>
         <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">Model Name</label>
-            <input 
-                className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700 focus:ring-2 focus:ring-purple-100 transition-all" 
+            <Typography variant="label" className="ml-2">Model Name</Typography>
+            <Input 
                 placeholder="e.g. gpt-4, claude-3-opus" 
                 value={form.model} 
                 onChange={e => setForm({ ...form, model: e.target.value })} 
@@ -171,17 +184,7 @@ function AIModal({ user, onClose }: any) {
           theme="purple"
         />
       </div>
-      <button 
-        onClick={() => {
-            if (!form.key) return addToast('error', 'API Key required')
-            mutation.mutate({ provider: form.provider, base_url: form.base_url, api_key: form.key, model: form.model, language: form.language })
-        }} 
-        disabled={mutation.isPending} 
-        className="w-full py-5 bg-purple-600 text-white rounded-[24px] font-black shadow-xl mt-8 disabled:opacity-50 text-xs uppercase tracking-widest active:scale-95 transition-all hover:bg-purple-700"
-      >
-        {mutation.isPending ? 'Verifying...' : 'Verify & Enable AI'}
-      </button>
-    </ModalWrapper>
+    </SelectionModal>
   )
 }
 
@@ -201,21 +204,29 @@ function KarakeepModal({ user, onClose }: any) {
   })
 
   return (
-    <ModalWrapper title="Karakeep Link" onClose={onClose}>
+    <SelectionModal 
+        isOpen={true} onClose={onClose} 
+        title="Karakeep Link"
+        onConfirm={() => {
+            if (!form.url || !form.key) return addToast('error', 'URL and Key required')
+            mutation.mutate({ url: form.url, api_key: form.key })
+        }}
+        confirmLabel={mutation.isPending ? 'Verifying...' : 'Verify & Link'}
+        loading={mutation.isPending}
+        className="md:max-w-md md:mx-auto"
+    >
       <div className="space-y-4">
         <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">Server URL</label>
-            <input 
-                className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700 focus:ring-2 focus:ring-pink-100 transition-all" 
+            <Typography variant="label" className="ml-2">Server URL</Typography>
+            <Input 
                 placeholder="e.g. https://api.karakeep.app" 
                 value={form.url} 
                 onChange={e => setForm({ ...form, url: e.target.value })} 
             />
         </div>
         <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">API Token</label>
-            <input 
-                className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700 focus:ring-2 focus:ring-pink-100 transition-all" 
+            <Typography variant="label" className="ml-2">API Token</Typography>
+            <Input 
                 type="password" 
                 placeholder="Paste your API Token" 
                 value={form.key} 
@@ -223,17 +234,7 @@ function KarakeepModal({ user, onClose }: any) {
             />
         </div>
       </div>
-      <button 
-        onClick={() => {
-            if (!form.url || !form.key) return addToast('error', 'URL and Key required')
-            mutation.mutate({ url: form.url, api_key: form.key })
-        }} 
-        disabled={mutation.isPending} 
-        className="w-full py-5 bg-pink-500 text-white rounded-[24px] font-black shadow-xl mt-8 disabled:opacity-50 text-xs uppercase tracking-widest active:scale-95 transition-all hover:bg-pink-600"
-      >
-        {mutation.isPending ? 'Verifying...' : 'Verify & Link'}
-      </button>
-    </ModalWrapper>
+    </SelectionModal>
   )
 }
 
@@ -247,15 +248,22 @@ function CreateUserModal({ onClose }: any) {
   })
 
   return (
-    <ModalWrapper title="Provision Account" onClose={onClose}>
+    <SelectionModal 
+        isOpen={true} onClose={onClose} 
+        title="Provision Account"
+        onConfirm={() => mutation.mutate(form)}
+        confirmLabel="Create Account"
+        loading={mutation.isPending}
+        className="md:max-w-md md:mx-auto"
+    >
       <div className="space-y-6">
         <div className="space-y-4">
-          <input className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700 focus:ring-2 focus:ring-indigo-100" placeholder="Username" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} />
-          <input className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700" type="password" placeholder="Password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
+          <Input placeholder="Username" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} />
+          <Input type="password" placeholder="Password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
         </div>
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">Assign Role</label>
+          <Typography variant="label" className="ml-2">Assign Role</Typography>
           <div className="bg-slate-100 p-1.5 rounded-[20px] flex gap-1 shadow-inner">
             <button onClick={() => setForm({ ...form, role: 'user' })} className={cn("flex-1 py-3 rounded-[14px] text-xs font-black transition-all flex items-center justify-center gap-2", form.role === 'user' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400")}>
               <UserIcon size={14} /> User
@@ -265,10 +273,8 @@ function CreateUserModal({ onClose }: any) {
             </button>
           </div>
         </div>
-
-        <button onClick={() => mutation.mutate(form)} disabled={mutation.isPending} className="w-full py-5 bg-slate-900 text-white rounded-[24px] font-black shadow-2xl active:scale-95 transition-all text-xs uppercase tracking-widest">Create Account</button>
       </div>
-    </ModalWrapper>
+    </SelectionModal>
   )
 }
 
@@ -287,28 +293,21 @@ function SettingsRow({ icon, label, sub, onClick }: any) {
   )
 }
 
-function ModalWrapper({ title, children, onClose }: any) {
-  return (
-    <div className="fixed inset-0 z-[100] bg-black/5 backdrop-blur-md flex items-center justify-center p-6 text-slate-900">
-      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white p-10 rounded-[48px] max-w-md w-full shadow-2xl border border-white">
-        <div className="flex items-center justify-between mb-8">
-          <h4 className="text-2xl font-black text-slate-900 tracking-tight">{title}</h4>
-          <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-xl text-slate-300"><X /></button>
-        </div>
-        {children}
-      </motion.div>
-    </div>
-  )
-}
-
 function ProfileModal({ user, onClose }: any) {
   const [name, setName] = useState(user.username); const addToast = useToast(state => state.add)
   const mutation = useMutation({ mutationFn: userApi.updateProfile, onSuccess: () => { addToast('success', 'Profile renamed'); onClose(); } })
+  
   return (
-    <ModalWrapper title="Rename Profile" onClose={onClose}>
-      <input className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700" value={name} onChange={e => setName(e.target.value)} />
-      <button onClick={() => mutation.mutate({ username: name })} className="w-full py-4 bg-slate-900 text-white rounded-[20px] font-bold shadow-xl mt-6">Update</button>
-    </ModalWrapper>
+    <SelectionModal 
+        isOpen={true} onClose={onClose} 
+        title="Rename Profile"
+        onConfirm={() => mutation.mutate({ username: name })}
+        confirmLabel="Update"
+        loading={mutation.isPending}
+        className="md:max-w-md md:mx-auto"
+    >
+      <Input value={name} onChange={e => setName(e.target.value)} />
+    </SelectionModal>
   )
 }
 
@@ -323,16 +322,22 @@ function PasswordModal({ onClose }: any) {
     }
   })
   return (
-    <ModalWrapper title="Change Password" onClose={onClose}>
+    <SelectionModal 
+        isOpen={true} onClose={onClose} 
+        title="Change Password"
+        onConfirm={() => {
+            if (!form.old || !form.new) return addToast('error', 'Fields required');
+            mutation.mutate({ old_password: form.old, new_password: form.new })
+        }}
+        confirmLabel="Update"
+        loading={mutation.isPending}
+        className="md:max-w-md md:mx-auto"
+    >
       <div className="space-y-4">
-        <input className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700" type="password" placeholder="Old Password" value={form.old} onChange={e => setForm({ ...form, old: e.target.value })} />
-        <input className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700" type="password" placeholder="New Password" value={form.new} onChange={e => setForm({ ...form, new: e.target.value })} />
+        <Input type="password" placeholder="Old Password" value={form.old} onChange={e => setForm({ ...form, old: e.target.value })} />
+        <Input type="password" placeholder="New Password" value={form.new} onChange={e => setForm({ ...form, new: e.target.value })} />
       </div>
-      <button onClick={() => {
-        if (!form.old || !form.new) return addToast('error', 'Fields required');
-        mutation.mutate({ old_password: form.old, new_password: form.new })
-      }} disabled={mutation.isPending} className="w-full py-4 bg-slate-900 text-white rounded-[20px] font-bold shadow-xl mt-6 disabled:opacity-50">Update</button>
-    </ModalWrapper>
+    </SelectionModal>
   )
 }
 
@@ -340,11 +345,24 @@ function TimezoneModal({ user, onClose }: any) {
   const [tz, setTz] = useState(user.timezone || 'UTC'); const addToast = useToast(state => state.add)
   const mutation = useMutation({ mutationFn: userApi.updateProfile, onSuccess: () => { addToast('success', 'Timezone synced'); onClose(); } })
   const timezones = ['UTC', 'Asia/Shanghai', 'America/New_York', 'Europe/London', 'Asia/Tokyo']
+  
   return (
-    <ModalWrapper title="Select Timezone" onClose={onClose}>
-      <div className="grid gap-2">{timezones.map(t => (<button key={t} onClick={() => setTz(t)} className={cn("px-6 py-4 rounded-2xl text-left font-bold transition-all", tz === t ? "bg-indigo-600 text-white shadow-lg" : "bg-slate-50 text-slate-600")}>{t}</button>))}</div>
-      <button onClick={() => mutation.mutate({ timezone: tz })} className="w-full py-4 bg-slate-900 text-white rounded-[20px] font-bold shadow-xl mt-4">Save</button>
-    </ModalWrapper>
+    <SelectionModal 
+        isOpen={true} onClose={onClose} 
+        title="Select Timezone"
+        onConfirm={() => mutation.mutate({ timezone: tz })}
+        confirmLabel="Save"
+        loading={mutation.isPending}
+        className="md:max-w-md md:mx-auto"
+    >
+      <div className="grid gap-2">
+          {timezones.map(t => (
+            <button key={t} onClick={() => setTz(t)} className={cn("px-6 py-4 rounded-2xl text-left font-bold transition-all", tz === t ? "bg-indigo-600 text-white shadow-lg" : "bg-slate-50 text-slate-600")}>
+                {t}
+            </button>
+          ))}
+      </div>
+    </SelectionModal>
   )
 }
 
@@ -355,8 +373,16 @@ function TimeOffsetModal({ user, onClose }: any) {
   const mutation = useMutation({ mutationFn: userApi.updateProfile, onSuccess: () => { addToast('success', 'Time Corrected'); onClose(); } })
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t) }, [])
   const adj = new Date(now.getTime() + mins * 60000)
+  
   return (
-    <ModalWrapper title="Time Correction" onClose={onClose}>
+    <SelectionModal 
+        isOpen={true} onClose={onClose} 
+        title="Time Correction"
+        onConfirm={() => mutation.mutate({ time_offset_mins: mins })}
+        confirmLabel="Apply Calibration"
+        loading={mutation.isPending}
+        className="md:max-w-md md:mx-auto"
+    >
       <div className="text-center p-8 bg-slate-900 rounded-[32px] text-white shadow-2xl mb-8">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">Adjusted Real-time</p>
         <p className="text-5xl font-black tabular-nums">{adj.toLocaleTimeString([], { hour12: false })}</p>
@@ -366,8 +392,7 @@ function TimeOffsetModal({ user, onClose }: any) {
         <OffsetControl label="Hours" value={Math.floor(mins / 60)} onAdd={() => setMins(mins + 60)} onSub={() => setMins(mins - 60)} />
         <OffsetControl label="Minutes" value={mins % 60} onAdd={() => setMins(mins + 1)} onSub={() => setMins(mins - 1)} />
       </div>
-      <button onClick={() => mutation.mutate({ time_offset_mins: mins })} className="w-full py-5 bg-indigo-600 text-white rounded-[24px] font-black shadow-xl mt-8 text-xs">APPLY CALIBRATION</button>
-    </ModalWrapper>
+    </SelectionModal>
   )
 }
 
@@ -395,29 +420,44 @@ function ImmichModal({ user, onClose }: any) {
     }
   })
   return (
-    <ModalWrapper title="Immich Link" onClose={onClose}>
+    <SelectionModal 
+        isOpen={true} onClose={onClose} 
+        title="Immich Link"
+        onConfirm={() => {
+            if (!form.url || !form.key) return addToast('error', 'URL and Key required')
+            mutation.mutate({ url: form.url, api_key: form.key })
+        }}
+        confirmLabel={mutation.isPending ? 'Verifying...' : 'Verify & Link'}
+        loading={mutation.isPending}
+        className="md:max-w-md md:mx-auto"
+    >
       <div className="space-y-4">
-        <input className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700" placeholder="e.g. https://immich.yourdomain.com" value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} />
-        <input className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700" type="password" placeholder="API Key" value={form.key} onChange={e => setForm({ ...form, key: e.target.value })} />
+        <Input placeholder="e.g. https://immich.yourdomain.com" value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} />
+        <Input type="password" placeholder="API Key" value={form.key} onChange={e => setForm({ ...form, key: e.target.value })} />
       </div>
-      <button onClick={() => {
-        if (!form.url || !form.key) return addToast('error', 'URL and Key required')
-        mutation.mutate({ url: form.url, api_key: form.key })
-      }} disabled={mutation.isPending} className="w-full py-4 bg-indigo-600 text-white rounded-[20px] font-bold shadow-xl mt-6 disabled:opacity-50">
-        {mutation.isPending ? 'Verifying...' : 'Verify & Link'}
-      </button>
-    </ModalWrapper>
+    </SelectionModal>
   )
 }
 
 function SystemModal({ onClose }: any) {
   return (
-    <ModalWrapper title="Maintenance" onClose={onClose}>
+    <SelectionModal 
+        isOpen={true} onClose={onClose} 
+        title="Maintenance"
+        className="md:max-w-md md:mx-auto"
+    >
       <div className="grid grid-cols-2 gap-4">
-        <button onClick={() => userApi.exportDb()} className="flex flex-col items-center gap-3 p-6 bg-slate-50 rounded-[28px] hover:bg-indigo-50 hover:text-indigo-600 transition-all border border-transparent hover:border-indigo-100"><Download size={24} /><span className="text-[10px] font-black uppercase tracking-widest">Export DB</span></button>
-        <div className="relative flex flex-col items-center gap-3 p-6 bg-slate-50 rounded-[28px] hover:bg-amber-50 hover:text-amber-600 transition-all border border-transparent hover:border-amber-100"><Upload size={24} /><span className="text-[10px] font-black uppercase tracking-widest">Import DB</span><input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => { const f = e.target.files?.[0]; if (f) userApi.importDb(f).then(() => window.location.reload()) }} /></div>
+        <button onClick={() => userApi.exportDb()} className="flex flex-col items-center gap-3 p-6 bg-slate-50 rounded-[28px] hover:bg-indigo-50 hover:text-indigo-600 transition-all border border-transparent hover:border-indigo-100">
+            <Download size={24} />
+            <span className="text-[10px] font-black uppercase tracking-widest">Export DB</span>
+        </button>
+        <div className="relative flex flex-col items-center gap-3 p-6 bg-slate-50 rounded-[28px] hover:bg-amber-50 hover:text-amber-600 transition-all border border-transparent hover:border-amber-100">
+            <Upload size={24} />
+            <span className="text-[10px] font-black uppercase tracking-widest">Import DB</span>
+            <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => { const f = e.target.files?.[0]; if (f) userApi.importDb(f).then(() => window.location.reload()) }} />
+        </div>
       </div>
-    </ModalWrapper>
+    </SelectionModal>
   )
 }
 
@@ -431,27 +471,32 @@ function GeoModal({ user, onClose }: any) {
       addToast('error', msg)
     }
   })
+  
   return (
-    <ModalWrapper title="Geographic API" onClose={onClose}>
+    <SelectionModal 
+        isOpen={true} onClose={onClose} 
+        title="Geographic API"
+        onConfirm={() => {
+            if (!form.key) return addToast('error', 'API Key required')
+            mutation.mutate({ provider: form.provider, api_key: form.key })
+        }}
+        confirmLabel={mutation.isPending ? 'Verifying...' : 'Verify & Bind'}
+        loading={mutation.isPending}
+        className="md:max-w-md md:mx-auto"
+    >
       <div className="space-y-6">
         <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">Service Provider</label>
+          <Typography variant="label" className="ml-2">Service Provider</Typography>
           <div className="px-6 py-4 bg-indigo-50 rounded-2xl font-bold text-indigo-600 flex items-center gap-3">
             <Globe size={18} />
             高德地图 (Amap)
           </div>
         </div>
         <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">API Key (Web Service)</label>
-          <input className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700" type="password" placeholder="Enter your API Key" value={form.key} onChange={e => setForm({ ...form, key: e.target.value })} />
+          <Typography variant="label" className="ml-2">API Key (Web Service)</Typography>
+          <Input type="password" placeholder="Enter your API Key" value={form.key} onChange={e => setForm({ ...form, key: e.target.value })} />
         </div>
-        <button onClick={() => {
-          if (!form.key) return addToast('error', 'API Key required')
-          mutation.mutate({ provider: form.provider, api_key: form.key })
-        }} disabled={mutation.isPending} className="w-full py-5 bg-indigo-600 text-white rounded-[24px] font-black shadow-xl disabled:opacity-50 text-xs uppercase tracking-widest active:scale-95 transition-all">
-          {mutation.isPending ? 'Verifying...' : 'Verify & Bind'}
-        </button>
       </div>
-    </ModalWrapper>
+    </SelectionModal>
   )
 }

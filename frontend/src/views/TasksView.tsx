@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Timer, ChevronLeft, Clock, CheckCircle2, XCircle, X, ChevronRight, Plus, Minus } from 'lucide-react'
+import { Timer, ChevronLeft, Clock, CheckCircle2, XCircle, ChevronRight, Plus, Minus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { taskApi, userApi } from '../lib/api'
 import { Card, useToast, cn } from '../components/ui/JourneyUI'
+import { SelectionModal } from '../components/ui/selection-modal'
 
 interface Task {
   id: number
@@ -110,10 +110,7 @@ export default function TasksView() {
   }
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }} 
-      animate={{ opacity: 1, y: 0 }} 
-      className="py-12 max-w-[700px] mx-auto space-y-8 pb-32"
+    <div className="py-12 max-w-[700px] mx-auto space-y-8 pb-32"
     >
       <header className="flex items-center gap-4">
         <button 
@@ -148,23 +145,21 @@ export default function TasksView() {
         )}
       </Card>
 
-      <AnimatePresence>
-        {editingTask && (
-          <TaskEditModal
-            task={editingTask}
-            timezone={user?.timezone || 'UTC'}
-            onClose={() => setEditingTask(null)}
-            onSave={(cronExpr, isEnabled) => {
-              updateMutation.mutate({ 
-                name: editingTask.name, 
-                data: { cron_expr: cronExpr, is_enabled: isEnabled } 
-              })
-            }}
-            isPending={updateMutation.isPending}
-          />
-        )}
-      </AnimatePresence>
-    </motion.div>
+      {editingTask && (
+        <TaskEditModal
+          task={editingTask}
+          timezone={user?.timezone || 'UTC'}
+          onClose={() => setEditingTask(null)}
+          onSave={(cronExpr, isEnabled) => {
+            updateMutation.mutate({ 
+              name: editingTask.name, 
+              data: { cron_expr: cronExpr, is_enabled: isEnabled } 
+            })
+          }}
+          isPending={updateMutation.isPending}
+        />
+      )}
+    </div>
   )
 }
 
@@ -331,111 +326,98 @@ function TaskEditModal({
     }
   }
 
+  const handleConfirm = () => {
+    onSave(buildCronExpr(), isEnabled)
+  }
+
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] bg-black/5 backdrop-blur-md flex items-center justify-center p-6"
+    <SelectionModal
+      isOpen={true}
+      onClose={onClose}
+      onConfirm={handleConfirm}
+      title={task.display_name}
+      subtitle="Configure task schedule"
+      confirmLabel="Save Changes"
+      loading={isPending}
+      variant="sheet"
+      className="md:max-w-md md:mx-auto"
     >
-      <motion.div 
-        initial={{ scale: 0.95, opacity: 0 }} 
-        animate={{ scale: 1, opacity: 1 }} 
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-white p-10 rounded-[48px] max-w-md w-full shadow-2xl border border-white"
-      >
-        <div className="flex items-center justify-between mb-8">
-          <h4 className="text-2xl font-black text-slate-900 tracking-tight">{task.display_name}</h4>
-          <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-xl text-slate-300">
-            <X size={20} />
+      <div className="space-y-6">
+        {/* Enable Toggle */}
+        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+          <div>
+            <p className="font-bold text-slate-700">Enable Task</p>
+            <p className="text-xs text-slate-400">Run this task on schedule</p>
+          </div>
+          <button
+            onClick={() => setIsEnabled(!isEnabled)}
+            className={cn(
+              "relative w-14 h-8 rounded-full transition-all duration-300",
+              isEnabled ? "bg-emerald-500" : "bg-slate-200"
+            )}
+          >
+            <div className={cn(
+              "absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300",
+              isEnabled ? "right-1" : "left-1"
+            )} />
           </button>
         </div>
         
-        <div className="space-y-6">
-          {/* Enable Toggle */}
-          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-            <div>
-              <p className="font-bold text-slate-700">Enable Task</p>
-              <p className="text-xs text-slate-400">Run this task on schedule</p>
-            </div>
-            <button
-              onClick={() => setIsEnabled(!isEnabled)}
-              className={cn(
-                "relative w-14 h-8 rounded-full transition-all duration-300",
-                isEnabled ? "bg-emerald-500" : "bg-slate-200"
-              )}
-            >
-              <div className={cn(
-                "absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300",
-                isEnabled ? "right-1" : "left-1"
-              )} />
-            </button>
-          </div>
-          
-          {/* Frequency Selection */}
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">
-              Frequency
-            </label>
-            <div className="bg-slate-100 p-1.5 rounded-[20px] flex gap-1 shadow-inner">
-              {(['daily', 'weekly', 'monthly'] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFrequency(f)}
-                  className={cn(
-                    "flex-1 py-3 rounded-[14px] text-xs font-black transition-all",
-                    frequency === f ? "bg-white text-emerald-600 shadow-sm" : "text-slate-400"
-                  )}
-                >
-                  {f.charAt(0).toUpperCase() + f.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          {/* Time Selection - Hour/Minute Controls */}
-          <div className="space-y-4">
-            <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">
-              Time (UTC)
-            </label>
-            
-            <div className="flex items-center gap-4">
-              <TimeControl 
-                label="Hour" 
-                value={hour} 
-                min={0} 
-                max={23} 
-                onChange={setHour} 
-              />
-              <span className="text-2xl font-black text-slate-300">:</span>
-              <TimeControl 
-                label="Minute" 
-                value={minute} 
-                min={0} 
-                max={59} 
-                onChange={setMinute} 
-              />
-            </div>
-            
-            {/* Preview in user's timezone */}
-            <div className="text-center p-4 bg-slate-900 rounded-2xl text-white">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">
-                Your Local Time
-              </p>
-              <p className="text-2xl font-black">{previewTime}</p>
-            </div>
+        {/* Frequency Selection */}
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">
+            Frequency
+          </label>
+          <div className="bg-slate-100 p-1.5 rounded-[20px] flex gap-1 shadow-inner">
+            {(['daily', 'weekly', 'monthly'] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFrequency(f)}
+                className={cn(
+                  "flex-1 py-3 rounded-[14px] text-xs font-black transition-all",
+                  frequency === f ? "bg-white text-emerald-600 shadow-sm" : "text-slate-400"
+                )}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            ))}
           </div>
         </div>
         
-        <button 
-          onClick={() => onSave(buildCronExpr(), isEnabled)}
-          disabled={isPending}
-          className="w-full py-5 bg-emerald-500 text-white rounded-[24px] font-black shadow-xl mt-8 disabled:opacity-50 text-xs uppercase tracking-widest active:scale-95 transition-all hover:bg-emerald-600"
-        >
-          {isPending ? 'Saving...' : 'Save Changes'}
-        </button>
-      </motion.div>
-    </motion.div>
+        {/* Time Selection - Hour/Minute Controls */}
+        <div className="space-y-4">
+          <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">
+            Time (UTC)
+          </label>
+          
+          <div className="flex items-center gap-4">
+            <TimeControl 
+              label="Hour" 
+              value={hour} 
+              min={0} 
+              max={23} 
+              onChange={setHour} 
+            />
+            <span className="text-2xl font-black text-slate-300">:</span>
+            <TimeControl 
+              label="Minute" 
+              value={minute} 
+              min={0} 
+              max={59} 
+              onChange={setMinute} 
+            />
+          </div>
+          
+          {/* Preview in user's timezone */}
+          <div className="text-center p-4 bg-slate-900 rounded-2xl text-white">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">
+              Your Local Time
+            </p>
+            <p className="text-2xl font-black">{previewTime}</p>
+          </div>
+        </div>
+      </div>
+    </SelectionModal>
   )
 }
 

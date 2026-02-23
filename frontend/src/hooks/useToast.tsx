@@ -32,7 +32,7 @@ export function ToastContainer() {
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: -20, opacity: 0, scale: 0.95 }}
             className={cn(
-              "px-8 py-4 rounded-full backdrop-blur-3xl shadow-[0_20px_40px_rgba(35,47,85,0.08)] border border-white/50 flex items-center gap-4 pointer-events-auto bg-white/80",
+              "px-8 py-4 rounded-2xl backdrop-blur-3xl shadow-[0_20px_40px_rgba(35,47,85,0.08)] border border-white/50 flex items-center gap-4 pointer-events-auto bg-white/80",
               t.type === 'success' ? "text-emerald-700" : "text-rose-600"
             )}
           >

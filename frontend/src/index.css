@@ -25,7 +25,7 @@ body::before {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
   opacity: 0.012;
   pointer-events: none;
 }
@@ -111,59 +111,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .prose pre code {
-  @apply bg-transparent p-0 border-none text-inherit;
-}
-
-/* Code Block Syntax Highlighting - Lowlight theme */
-.prose pre .hljs-comment,
-.prose pre .hljs-quote {
-  @apply text-slate-400;
-}
-
-.prose pre .hljs-keyword,
-.prose pre .hljs-selector-tag,
-.prose pre .hljs-addition {
-  @apply text-[#6ebeea];
-}
-
-.prose pre .hljs-string,
-.prose pre .hljs-meta .hljs-string,
-.prose pre .hljs-attribute {
-  @apply text-amber-300;
-}
-
-.prose pre .hljs-number,
-.prose pre .hljs-literal,
-.prose pre .hljs-regexp {
-  @apply text-pink-300;
-}
-
-.prose pre .hljs-function .hljs-title,
-.prose pre .hljs-title.function_ {
-  @apply text-emerald-300;
-}
-
-.prose pre .hljs-variable,
-.prose pre .hljs-template-variable,
-.prose pre .hljs-params {
-  @apply text-slate-200;
-}
-
-.prose pre .hljs-built_in,
-.prose pre .hljs-class .hljs-title {
-  @apply text-purple-300;
-}
-
-.prose pre .hljs-deletion {
-  @apply text-red-400;
-}
-
-.prose pre .hljs-emphasis {
-  @apply italic;
-}
-
-.prose pre .hljs-strong {
-  @apply font-bold;
+  @apply bg-transparent p-0 text-inherit border-none text-sm;
 }
 
 .prose img {
@@ -329,4 +277,3 @@ body.mobile-app .h-screen {
   height: 100% !important;
   min-height: 0 !important;
 }
-

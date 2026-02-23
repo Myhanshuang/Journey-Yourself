@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from sqlmodel import Session, select
 import httpx
 import uuid
 import os
@@ -9,15 +10,16 @@ from app.auth import get_current_user
 from app.models import User
 from app.security import decrypt_data
 from app.config import settings
+from app.database import get_session
 
 router = APIRouter(prefix="/api/proxy/immich", tags=["immich-proxy"])
 
 UPLOAD_DIR = "data/uploads"
 
 
-def generate_asset_signature(asset_id: str) -> str:
-    """生成资源签名（永不过期）"""
-    message = f"immich:{asset_id}"
+def generate_asset_signature(asset_id: str, user_id: int = 1) -> str:
+    """生成资源签名（永不过期），包含用户ID"""
+    message = f"immich:{user_id}:{asset_id}"
     return hmac.new(
         settings.SECRET_KEY.encode(),
         message.encode(),
@@ -25,10 +27,18 @@ def generate_asset_signature(asset_id: str) -> str:
     ).hexdigest()[:32]
 
 
-def verify_asset_signature(asset_id: str, sig: str) -> bool:
-    """验证资源签名"""
-    expected = generate_asset_signature(asset_id)
-    return hmac.compare_digest(expected, sig)
+def verify_asset_signature(asset_id: str, sig: str, session: Session) -> tuple[bool, User | None]:
+    """验证资源签名，遍历数据库中所有用户进行验证
+    
+    返回: (是否有效, 用户对象)
+    """
+    # 查询所有用户
+    users = session.exec(select(User)).all()
+    for user in users:
+        expected = generate_asset_signature(asset_id, user.id)
+        if hmac.compare_digest(expected, sig):
+            return True, user
+    return False, None
 
 
 def get_immich_headers(user: User) -> dict:
@@ -60,7 +70,7 @@ async def list_albums(current_user: User = Depends(get_current_user)):
             # 为每个相册的封面添加签名
             for album in albums:
                 if album.get("albumThumbnailAssetId"):
-                    album["albumThumbnailSig"] = generate_asset_signature(album["albumThumbnailAssetId"])
+                    album["albumThumbnailSig"] = generate_asset_signature(album["albumThumbnailAssetId"], current_user.id)
             return albums
         return []
 
@@ -82,7 +92,7 @@ async def list_album_assets(album_id: str, current_user: User = Depends(get_curr
                 "type": a.get("type"),
                 "duration": a.get("duration"),
                 "originalFileName": a.get("originalFileName"),
-                "sig": generate_asset_signature(a.get("id")),
+                "sig": generate_asset_signature(a.get("id"), current_user.id),
             } for a in assets]
         return []
 
@@ -105,7 +115,7 @@ async def list_immich_assets(page: int = 1, size: int = 50, current_user: User =
                 "type": a.get("type"),
                 "duration": a.get("duration"),
                 "originalFileName": a.get("originalFileName"),
-                "sig": generate_asset_signature(a.get("id")),
+                "sig": generate_asset_signature(a.get("id"), current_user.id),
             } for a in items]
         return []
 
@@ -114,16 +124,17 @@ async def list_immich_assets(page: int = 1, size: int = 50, current_user: User =
 async def proxy_asset(
     asset_id: str, 
     sig: str = Query(...),
-    current_user: User = Depends(get_current_user)
+    session: Session = Depends(get_session)
 ):
-    """代理缩略图 - 支持签名验证"""
-    # 优先验证签名，签名有效则无需检查用户配置
-    if not verify_asset_signature(asset_id, sig):
+    """代理缩略图 - 支持签名验证，无需 Authorization header"""
+    # 通过签名验证获取用户
+    valid, user = verify_asset_signature(asset_id, sig, session)
+    if not valid or not user:
         raise HTTPException(403, "Invalid signature")
     
-    headers = get_immich_headers(current_user)
+    headers = get_immich_headers(user)
     if not headers: raise HTTPException(404, "Immich not configured")
-    base_url = get_immich_base_url(current_user)
+    base_url = get_immich_base_url(user)
     
     async def generate():
         async with httpx.AsyncClient(base_url=base_url, headers=headers, verify=False, timeout=60.0) as client:
@@ -161,15 +172,16 @@ async def get_asset_info(asset_id: str, current_user: User = Depends(get_current
 async def proxy_original(
     asset_id: str,
     sig: str = Query(...),
-    current_user: User = Depends(get_current_user)
+    session: Session = Depends(get_session)
 ):
-    """代理原始图片 - 支持签名验证"""
-    if not verify_asset_signature(asset_id, sig):
+    """代理原始图片 - 支持签名验证，无需 Authorization header"""
+    valid, user = verify_asset_signature(asset_id, sig, session)
+    if not valid or not user:
         raise HTTPException(403, "Invalid signature")
     
-    headers = get_immich_headers(current_user)
+    headers = get_immich_headers(user)
     if not headers: raise HTTPException(404, "Immich not configured")
-    base_url = get_immich_base_url(current_user)
+    base_url = get_immich_base_url(user)
     
     async def generate():
         async with httpx.AsyncClient(base_url=base_url, headers=headers, verify=False, timeout=300.0) as client:
@@ -184,15 +196,16 @@ async def proxy_original(
 async def proxy_video(
     asset_id: str,
     sig: str = Query(...),
-    current_user: User = Depends(get_current_user)
+    session: Session = Depends(get_session)
 ):
-    """代理视频播放流 - 支持签名验证"""
-    if not verify_asset_signature(asset_id, sig):
+    """代理视频播放流 - 支持签名验证，无需 Authorization header"""
+    valid, user = verify_asset_signature(asset_id, sig, session)
+    if not valid or not user:
         raise HTTPException(403, "Invalid signature")
     
-    headers = get_immich_headers(current_user)
+    headers = get_immich_headers(user)
     if not headers: raise HTTPException(404, "Immich not configured")
-    base_url = get_immich_base_url(current_user)
+    base_url = get_immich_base_url(user)
     
     async def generate():
         async with httpx.AsyncClient(base_url=base_url, headers=headers, verify=False, timeout=300.0) as client:
@@ -222,7 +235,7 @@ async def import_asset(asset_id: str, mode: str = "link", current_user: User = D
         duration = asset_info.get("duration")
         
         # 生成签名
-        sig = generate_asset_signature(asset_id)
+        sig = generate_asset_signature(asset_id, current_user.id)
         
         if mode == "link":
             if asset_type == "VIDEO":
