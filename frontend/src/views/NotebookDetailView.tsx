@@ -47,6 +47,23 @@ export default function NotebookDetailView() {
     setNotebookModal({ show: true, data: notebook })
   }
 
+  const handleDeleteNotebook = () => {
+    askConfirm(
+      "Delete this notebook?",
+      "All memories inside will be lost forever. This cannot be undone.",
+      async () => {
+        try {
+          await notebookApi.delete(Number(id))
+          queryClient.invalidateQueries()
+          addToast('success', 'Notebook deleted')
+          navigate('/notebooks')
+        } catch (e) {
+          addToast('error', 'Failed to delete notebook')
+        }
+      }
+    )
+  }
+
   const handleDeleteDiary = (diaryId: number) => {
     askConfirm(
       "Erase Memory?",
@@ -110,6 +127,7 @@ export default function NotebookDetailView() {
   const actions = [
     { label: 'Share Collection', icon: <Link2 size={18} />, onClick: handleShare },
     { label: 'Edit Info', icon: <Edit3 size={18} />, onClick: handleEdit },
+    { label: 'Delete Notebook', icon: <Trash2 size={18} />, onClick: handleDeleteNotebook, variant: 'danger' as const },
   ]
 
   return (

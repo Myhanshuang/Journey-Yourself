@@ -1,9 +1,13 @@
 import { useState, useRef, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, X, Cloud, Loader2, Check, Video as VideoIcon, Image as ImageIcon, Play } from 'lucide-react'
-import { cn, Card } from '../ui/JourneyUI'
-import api, { immichApi } from '../../lib/api'
+import { motion } from 'framer-motion'
+import { ChevronLeft, Loader2, Play, Image as ImageIcon } from 'lucide-react'
+import { cn } from '../../lib/utils'
+import api from '../../lib/api'
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query'
+import { Modal } from '../ui/modal'
+import { Button } from '../ui/button'
+import { Card } from '../ui/card'
+import { Typography } from '../ui/typography'
 
 // 获取完整的API URL，移动端需要使用存储的server_url
 const getApiBaseUrl = () => {
@@ -20,7 +24,13 @@ const getThumbUrl = (assetId: string, sig: string) => {
   return `${baseUrl}/proxy/immich/asset/${assetId}?sig=${sig}`
 }
 
-export default function ImmichPicker({ onSelect, onClose }: any) {
+interface ImmichPickerProps {
+  onSelect: (id: string, sig: string, mode: 'link' | 'copy') => void
+  onClose: () => void
+  isOpen?: boolean // Add isOpen prop to control the modal state from parent if needed, though usually mounted conditionally
+}
+
+export default function ImmichPicker({ onSelect, onClose }: ImmichPickerProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'albums'>('all')
   const [selectedAlbum, setSelectedAlbum] = useState<any>(null)
   const [importMode, setImportMode] = useState<'link' | 'copy'>('link')
@@ -64,42 +74,99 @@ export default function ImmichPicker({ onSelect, onClose }: any) {
   const allPhotos = data?.pages.flat() || []
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }} 
-      animate={{ opacity: 1, y: 0 }} 
-      exit={{ opacity: 0, y: 20 }} 
-      className="fixed inset-0 z-[250] bg-white flex flex-col overflow-hidden text-slate-900 font-sans"
+    <Modal 
+      isOpen={true} 
+      onClose={onClose} 
+      variant="fullscreen" 
+      className="bg-white p-0"
     >
-      <header className="h-24 border-b border-slate-100 px-10 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
-         <div className="flex items-center gap-6">
-            <button onClick={selectedAlbum ? () => setSelectedAlbum(null) : onClose} className="p-3 hover:bg-slate-50 rounded-2xl transition-all text-slate-400">
-               {selectedAlbum ? <ChevronLeft size={24}/> : <X size={24}/>}
-            </button>
+      <header className="flex-none pt-safe px-6 pb-4 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-md z-10 sticky top-0">
+         <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={selectedAlbum ? () => setSelectedAlbum(null) : onClose}
+              className="rounded-full hover:bg-slate-100"
+            >
+               <ChevronLeft size={24} className="text-slate-400"/>
+            </Button>
             <div className="space-y-0.5">
-               <h4 className="text-3xl font-black tracking-tight">{selectedAlbum ? selectedAlbum.albumName : 'Immich Library'}</h4>
-               <p className="text-[10px] font-black uppercase tracking-widest text-slate-300">
-                  {selectedAlbum ? `${selectedAlbum.assetCount} items inside` : 'Photos, Videos & More'}
-               </p>
+               <Typography variant="h4" className="text-lg md:text-xl">
+                 {selectedAlbum ? selectedAlbum.albumName : 'Immich Library'}
+               </Typography>
+               <Typography variant="label">
+                  {selectedAlbum ? `${selectedAlbum.assetCount} items` : 'Photos & Videos'}
+               </Typography>
             </div>
          </div>
 
          {/* 标签页与模式切换 */}
          {!selectedAlbum && (
-           <div className="bg-slate-100 p-1.5 rounded-[20px] flex gap-1">
-              <button onClick={() => setActiveTab('all')} className={cn("px-6 py-2.5 rounded-[14px] text-xs font-black transition-all uppercase tracking-widest", activeTab === 'all' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400 hover:text-slate-600")}>All</button>
-              <button onClick={() => setActiveTab('albums')} className={cn("px-6 py-2.5 rounded-[14px] text-xs font-black transition-all uppercase tracking-widest", activeTab === 'albums' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400 hover:text-slate-600")}>Albums</button>
+           <div className="hidden md:flex bg-slate-100 p-1 rounded-[16px] gap-1">
+              <Button 
+                variant={activeTab === 'all' ? 'active' : 'ghost'} 
+                size="sm" 
+                onClick={() => setActiveTab('all')}
+                className={cn("rounded-[12px]", activeTab === 'all' && "bg-white shadow-sm border-transparent")}
+              >
+                All
+              </Button>
+              <Button 
+                variant={activeTab === 'albums' ? 'active' : 'ghost'} 
+                size="sm" 
+                onClick={() => setActiveTab('albums')}
+                className={cn("rounded-[12px]", activeTab === 'albums' && "bg-white shadow-sm border-transparent")}
+              >
+                Albums
+              </Button>
            </div>
          )}
 
-         <div className="bg-slate-900 p-1.5 rounded-[20px] flex gap-1 shadow-xl">
-            <button onClick={() => setImportMode('link')} className={cn("px-5 py-2 rounded-[14px] text-[10px] font-black transition-all uppercase tracking-widest", importMode === 'link' ? "bg-white/20 text-white" : "text-slate-500")}>Link</button>
-            <button onClick={() => setImportMode('copy')} className={cn("px-5 py-2 rounded-[14px] text-[10px] font-black transition-all uppercase tracking-widest", importMode === 'copy' ? "bg-white/20 text-white" : "text-slate-500")}>Copy</button>
+         <div className="bg-slate-900 p-1 rounded-[16px] flex gap-1 shadow-lg">
+            <Button 
+              variant="ghost"
+              size="sm"
+              onClick={() => setImportMode('link')} 
+              className={cn("h-8 rounded-[12px] text-[10px]", importMode === 'link' ? "bg-white/20 text-white hover:bg-white/20 hover:text-white" : "text-slate-500 hover:text-slate-300 hover:bg-transparent")}
+            >
+              Link
+            </Button>
+            <Button 
+              variant="ghost"
+              size="sm"
+              onClick={() => setImportMode('copy')} 
+              className={cn("h-8 rounded-[12px] text-[10px]", importMode === 'copy' ? "bg-white/20 text-white hover:bg-white/20 hover:text-white" : "text-slate-500 hover:text-slate-300 hover:bg-transparent")}
+            >
+              Copy
+            </Button>
          </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-10 no-scrollbar pb-32">
+      {/* Mobile Tabs (Secondary Header) */}
+      {!selectedAlbum && (
+         <div className="md:hidden px-6 py-2 flex items-center gap-2 border-b border-slate-50 bg-white">
+            <Button 
+              variant={activeTab === 'all' ? 'default' : 'secondary'} 
+              size="sm" 
+              onClick={() => setActiveTab('all')}
+              className={cn("rounded-full px-6 h-8", activeTab !== 'all' && "bg-slate-100 border-transparent text-slate-400")}
+            >
+              All Photos
+            </Button>
+            <Button 
+              variant={activeTab === 'albums' ? 'default' : 'secondary'} 
+              size="sm" 
+              onClick={() => setActiveTab('albums')}
+              className={cn("rounded-full px-6 h-8", activeTab !== 'albums' && "bg-slate-100 border-transparent text-slate-400")}
+            >
+              Albums
+            </Button>
+         </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto p-4 md:p-10 pb-safe no-scrollbar">
          {activeTab === 'all' ? (
-            <div className="space-y-10">
+            <div className="space-y-10 pb-20">
               <AssetGrid assets={allPhotos} onSelect={(id:string, sig:string) => onSelect(id, sig, importMode)} />
               <div ref={lastElementRef} className="h-20 flex items-center justify-center">
                  {(hasNextPage || isFetchingNextPage) && <Loader2 className="animate-spin text-indigo-500" size={32}/>}
@@ -108,31 +175,31 @@ export default function ImmichPicker({ onSelect, onClose }: any) {
          ) : selectedAlbum ? (
             <AssetGrid assets={albumAssets} onSelect={(id:string, sig:string) => onSelect(id, sig, importMode)} loading={loadingAlbumAssets} />
          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8 pb-20">
                {loadingAlbums ? [1,2,3,4].map(i => <div key={i} className="aspect-[4/5] bg-slate-50 rounded-[32px] animate-pulse" />) :
                 albums.map((album: any) => (
-                 <Card key={album.id} className="aspect-[4/5] cursor-pointer group relative overflow-hidden" onClick={() => setSelectedAlbum(album)}>
+                 <Card key={album.id} padding="none" className="aspect-[4/5] cursor-pointer group relative" onClick={() => setSelectedAlbum(album)}>
                     <img 
                       src={album.albumThumbnailSig ? getThumbUrl(album.albumThumbnailAssetId, album.albumThumbnailSig) : ''} 
                       className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-1000" 
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-8">
-                       <h5 className="text-white text-xl font-black tracking-tight">{album.albumName}</h5>
-                       <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">{album.assetCount} Items</p>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6">
+                       <Typography variant="h4" className="text-white text-lg">{album.albumName}</Typography>
+                       <Typography variant="label" className="text-white/60">{album.assetCount} Items</Typography>
                     </div>
                  </Card>
                ))}
             </div>
          )}
       </div>
-    </motion.div>
+    </Modal>
   )
 }
 
 function AssetGrid({ assets, onSelect, loading }: any) {
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-slate-200" size={48}/></div>
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
        {assets.map((asset: any) => {
          const id = asset.id || asset.assetId; 
          if (!id) return null
@@ -146,22 +213,22 @@ function AssetGrid({ assets, onSelect, loading }: any) {
              whileHover={{ scale: 1.02 }} 
              whileTap={{ scale: 0.98 }} 
              onClick={() => onSelect(id, sig)} 
-             className="aspect-square rounded-[28px] overflow-hidden bg-slate-50 border border-slate-100 group relative"
+             className="aspect-square rounded-[16px] md:rounded-[28px] overflow-hidden bg-slate-50 border border-slate-100 group relative"
            >
               <img src={getThumbUrl(id, sig)} className="w-full h-full object-cover" loading="lazy" />
               
               {/* 视频标识 */}
               {isVideo && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                  <div className="w-12 h-12 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg">
-                    <Play size={20} className="text-slate-900 ml-1" fill="currentColor" />
+                  <div className="w-8 h-8 md:w-12 md:h-12 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg">
+                    <Play size={16} className="text-slate-900 ml-0.5 md:ml-1 md:w-5 md:h-5" fill="currentColor" />
                   </div>
                 </div>
               )}
               
               {/* 视频时长 */}
               {isVideo && duration && (
-                <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/70 rounded-lg text-white text-[10px] font-bold">
+                <div className="absolute bottom-1 right-1 md:bottom-2 md:right-2 px-1.5 py-0.5 md:px-2 md:py-1 bg-black/70 rounded-md md:rounded-lg text-white text-[9px] md:text-[10px] font-bold">
                   {formatDuration(duration)}
                 </div>
               )}

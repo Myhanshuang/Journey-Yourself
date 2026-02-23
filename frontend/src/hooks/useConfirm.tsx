@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import { create } from 'zustand'
 import { cn } from '../lib/utils'
+import { Typography } from '../components/ui/typography'
 
 interface ConfirmStore {
   config: {
@@ -25,37 +26,64 @@ export function GlobalConfirmModal() {
   const { config, close } = useConfirm()
   if (!config) return null
 
+  const handleConfirm = () => {
+    config.onConfirm()
+    close()
+  }
+
   return createPortal(
     <AnimatePresence>
       {config.show && (
-        <div className="fixed inset-0 z-[1500] flex items-center justify-center p-6 bg-[#232f55]/10 backdrop-blur-md">
+        <>
+          {/* Backdrop */}
           <motion.div
-            initial={{ scale: 0.98, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.98, opacity: 0 }}
-            className="bg-[#f2f4f2] p-12 rounded-[48px] max-w-sm w-full shadow-[0_40px_80px_-20px_rgba(35,47,85,0.15)] border border-white/50"
-          >
-            <h4 className="text-3xl font-black text-[#232f55] tracking-tighter mb-4">{config.title}</h4>
-            <p className="text-[#232f55]/60 text-sm font-medium leading-relaxed mb-10">{config.message}</p>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={() => { config.onConfirm(); close(); }}
-                className={cn(
-                  "w-full py-5 rounded-[24px] font-black text-xs uppercase tracking-widest transition-all active:scale-95 shadow-xl",
-                  config.type === 'danger' ? "bg-rose-500 text-white shadow-rose-100" : "bg-[#232f55] text-white shadow-[#232f55]/20"
-                )}
-              >
-                Confirm
-              </button>
-              <button
-                onClick={close}
-                className="w-full py-5 text-[#232f55]/40 font-black text-xs uppercase tracking-widest hover:bg-white/50 rounded-[24px] transition-all"
-              >
-                Cancel
-              </button>
-            </div>
-          </motion.div>
-        </div>
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={close}
+            className="fixed inset-0 z-[1500] bg-black/20 backdrop-blur-sm"
+          />
+          
+          {/* Modal - using SelectionModal style */}
+          <div className="fixed inset-0 z-[1501] flex items-end justify-center sm:items-center pointer-events-none">
+            <motion.div
+              initial={{ opacity: 0, y: "100%" }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="w-full rounded-t-[32px] sm:rounded-[40px] bg-white shadow-xl max-h-[90vh] flex flex-col pb-safe pointer-events-auto max-w-md"
+            >
+              {/* Header */}
+              <div className="flex-none px-6 pt-6 pb-4">
+                <Typography variant="h3" className="text-[#232f55] mb-1">{config.title}</Typography>
+                <Typography variant="label" className="text-slate-400 block">{config.message}</Typography>
+              </div>
+
+              {/* Footer / Actions */}
+              <div className="flex-none px-6 pb-safe pt-2 bg-white/95 backdrop-blur-sm border-t border-slate-50 mt-auto">
+                <div className="flex gap-3 py-4">
+                  <button 
+                    onClick={close}
+                    className="flex-1 rounded-2xl h-12 text-slate-400 hover:bg-slate-50 hover:text-slate-600 font-black uppercase tracking-widest text-xs transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleConfirm}
+                    className={cn(
+                      "flex-[2] rounded-2xl h-12 shadow-xl font-black uppercase tracking-widest text-xs text-white transition-all active:scale-95",
+                      config.type === 'danger' 
+                        ? "bg-rose-500 shadow-rose-500/20 hover:bg-rose-600" 
+                        : "bg-[#232f55] shadow-[#232f55]/20 hover:bg-[#232f55]/90"
+                    )}
+                  >
+                    Confirm
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </>
       )}
     </AnimatePresence>,
     document.body

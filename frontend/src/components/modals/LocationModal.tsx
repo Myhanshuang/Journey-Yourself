@@ -1,14 +1,27 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { X, MapPin, Search as SearchIcon, Navigation, Loader2 } from 'lucide-react'
+import { MapPin, Search as SearchIcon, Navigation, Loader2 } from 'lucide-react'
 import { amapApi } from '../../lib/api'
 import { Geolocation } from '@capacitor/geolocation'
+import { SelectionModal } from '../ui/selection-modal'
+import { Button } from '../ui/button'
+import { Input } from '../ui/input'
+import { Typography } from '../ui/typography'
+import { Capacitor } from '@capacitor/core'
+import { cn } from '../../lib/utils'
 
-export default function LocationModal({ onSelect, onClose, currentSelection }: any) {
+interface LocationModalProps {
+  onSelect: (location: any) => void
+  onClose: () => void
+  currentSelection?: any
+  isOpen?: boolean
+}
+
+export default function LocationModal({ onSelect, onClose, currentSelection, isOpen = true }: LocationModalProps) {
   const [q, setQ] = useState(''); 
   const [res, setRes] = useState<any[]>([])
   const [isLocating, setIsLocating] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
+  const [selectedPoint, setSelectedPoint] = useState<any>(currentSelection || null)
 
   const handleSearch = async () => {
     if (!q.trim()) return
@@ -19,37 +32,46 @@ export default function LocationModal({ onSelect, onClose, currentSelection }: a
     } catch (e) { console.error('POI Search Failed', e) } finally { setIsSearching(false) }
   }
 
-  // 使用 Capacitor Geolocation 获取位置，支持安卓权限请求
+  // Cross-platform Geolocation with correct regeo logic
   const handleGetCurrent = async () => {
     setIsLocating(true)
     try {
-      // 检查权限状态
-      let permStatus = await Geolocation.checkPermissions()
-      
-      // 如果没有权限，请求权限
-      if (permStatus.location !== 'granted' && permStatus.coarseLocation !== 'granted') {
-        permStatus = await Geolocation.requestPermissions()
+      let coords: { latitude: number; longitude: number } | null = null;
+
+      if (Capacitor.isNativePlatform()) {
+        let permStatus = await Geolocation.checkPermissions()
+        if (permStatus.location !== 'granted' && permStatus.coarseLocation !== 'granted') {
+          permStatus = await Geolocation.requestPermissions()
+        }
+        if (permStatus.location !== 'granted' && permStatus.coarseLocation !== 'granted') {
+          throw new Error('Location permission denied')
+        }
+        const pos = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 30000,
+          maximumAge: 0
+        })
+        coords = pos.coords
+      } else {
+        coords = await new Promise((resolve, reject) => {
+          if (!navigator.geolocation) return reject(new Error('Geolocation not supported'))
+          navigator.geolocation.getCurrentPosition(
+            (pos) => resolve(pos.coords),
+            (err) => reject(err),
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+          )
+        })
       }
-      
-      // 权限被拒绝（精确位置和粗略位置都没有）
-      if (permStatus.location !== 'granted' && permStatus.coarseLocation !== 'granted') {
-        alert('位置权限被拒绝，请在系统设置中允许应用访问位置')
-        setIsLocating(false)
-        return
+
+      if (coords) {
+        // Correct parameter format for Amap API: longitude,latitude
+        const locStr = `${coords.longitude},${coords.latitude}`
+        // Use 'gps' for regeo as we are sending raw GPS coordinates
+        const pois = await amapApi.regeo(locStr, 'gps')
+        setRes(Array.isArray(pois) ? pois : [])
+        if (pois.length === 0) alert('No nearby points found. Try manual search.')
       }
-      
-      // 获取位置，启用高精度GPS定位
-      const pos = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,   // 使用GPS高精度定位
-        timeout: 30000,             // 30秒超时
-        maximumAge: 0               // 不使用缓存，获取实时位置
-      })
-      const locStr = `${pos.coords.longitude},${pos.coords.latitude}`
-      const pois = await amapApi.regeo(locStr, 'gps')
-      
-      // 将获取到的周边 POI 放入列表，供用户挑选
-      setRes(Array.isArray(pois) ? pois : [])
-      if (pois.length === 0) alert('No nearby points found. Try manual search.')
+
     } catch (err: any) {
       console.error('Location error:', err)
       alert(err.message || 'Failed to get location')
@@ -58,59 +80,93 @@ export default function LocationModal({ onSelect, onClose, currentSelection }: a
     }
   }
 
+  const handleConfirm = () => {
+    onSelect(selectedPoint)
+    onClose()
+  }
+
   return (
-    <div className="fixed inset-0 z-[210] bg-black/5 backdrop-blur-md flex items-center justify-center p-6 text-slate-900">
-      <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-white p-10 rounded-[48px] max-w-md w-full shadow-2xl border border-white space-y-8 flex flex-col max-h-[80vh]">
-         <div className="flex items-center justify-between text-slate-900">
-            <div className="space-y-1">
-               <h4 className="text-3xl font-black tracking-tight flex items-center gap-3"><MapPin size={28} className="text-indigo-600"/> Location</h4>
-               <p className="text-[10px] font-black uppercase tracking-widest text-slate-300">Set the stage for your memory</p>
-            </div>
-            <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-xl text-slate-300 transition-colors"><X/></button>
-         </div>
+    <SelectionModal
+      isOpen={isOpen}
+      onClose={onClose}
+      onConfirm={handleConfirm}
+      title="Location"
+      subtitle="Where does this memory belong?"
+      variant="sheet"
+      className="md:max-w-md md:mx-auto" // Restrict width on desktop
+    >
+      {/* 1. 触发当前位置 */}
+      <Button 
+        onClick={handleGetCurrent} 
+        disabled={isLocating} 
+        variant="secondary"
+        className="w-full flex items-center justify-center gap-3 py-6 rounded-[24px] font-bold mb-6 group bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-transparent shadow-none"
+      >
+        {isLocating ? <Loader2 className="animate-spin" size={20}/> : <Navigation size={20} className="group-hover:scale-110 transition-transform"/>}
+        <span>{isLocating ? 'Scanning Nearby...' : 'Scan Nearby Places'}</span>
+      </Button>
 
-         {/* 1. 触发当前位置 */}
-         <button onClick={handleGetCurrent} disabled={isLocating} className="w-full flex items-center justify-center gap-3 py-5 bg-indigo-50 text-indigo-600 rounded-[24px] font-bold hover:bg-indigo-100 transition-all disabled:opacity-50 group">
-            {isLocating ? <Loader2 className="animate-spin" size={20}/> : <Navigation size={20} className="group-hover:scale-110 transition-transform"/>}
-            <span>{isLocating ? 'Scanning Nearby...' : 'Scan Nearby Places'}</span>
-         </button>
+      {/* 2. 手动搜索 */}
+      <div className="relative mb-6">
+        <Input 
+          autoFocus 
+          className="pr-12 bg-slate-50 border-transparent focus:bg-white" 
+          placeholder="Search a specific place..." 
+          value={q} 
+          onChange={e => setQ(e.target.value)} 
+          onKeyDown={e => e.key === 'Enter' && handleSearch()} 
+        />
+        <Button 
+          size="icon"
+          onClick={handleSearch} 
+          className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-xl shadow-lg bg-[#232f55] text-white hover:bg-[#232f55]/90"
+        >
+          {isSearching ? <Loader2 className="animate-spin" size={16}/> : <SearchIcon size={16}/>}
+        </Button>
+      </div>
 
-         {/* 2. 手动搜索 */}
-         <div className="relative">
-            <input autoFocus className="w-full px-6 py-4 bg-slate-50 rounded-2xl outline-none font-bold text-slate-700 focus:ring-2 focus:ring-indigo-100 transition-all placeholder:text-slate-200" placeholder="Search a specific place..." value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key === 'Enter' && handleSearch()} />
-            <button onClick={handleSearch} className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-slate-900 text-white rounded-xl shadow-lg transition-all active:scale-90">
-               {isSearching ? <Loader2 className="animate-spin" size={16}/> : <SearchIcon size={16}/>}
+      {/* 3. 结果挑选列表 */}
+      <div className="space-y-2">
+        {res.map((p: any) => {
+          const isSelected = selectedPoint?.name === p.name
+          return (
+            <button 
+              key={p.id} 
+              onClick={() => setSelectedPoint({ 
+                name: p.name, 
+                address: p.address, 
+                lat: p.location.split(',')[1], 
+                lng: p.location.split(',')[0] 
+              })} 
+              className={cn(
+                "w-full text-left px-5 py-4 rounded-2xl border transition-all group",
+                isSelected 
+                  ? "bg-indigo-50 border-indigo-200" 
+                  : "bg-transparent border-transparent hover:bg-slate-50 hover:border-slate-100"
+              )}
+            >
+                <Typography variant="p" className={cn("font-bold m-0 p-0", isSelected ? "text-indigo-700" : "text-slate-800")}>{p.name}</Typography>
+                <Typography variant="label" className="text-[10px] text-slate-400 font-medium truncate mt-1 block">{p.address}</Typography>
             </button>
-         </div>
+          )
+        })}
+        {!isLocating && !isSearching && res.length === 0 && (
+          <div className="py-10 text-center space-y-2 opacity-20 grayscale">
+              <MapPin size={40} className="mx-auto text-slate-300" />
+              <Typography variant="label" className="text-xs text-slate-300">No places listed</Typography>
+          </div>
+        )}
+      </div>
 
-         {/* 3. 结果挑选列表 (统一展示搜索结果和当前位置结果) */}
-         <div className="flex-1 overflow-y-auto space-y-2 no-scrollbar">
-            {res.map((p: any) => (
-              <button 
-                key={p.id} 
-                onClick={() => onSelect({ 
-                  name: p.name, 
-                  address: p.address, 
-                  lat: p.location.split(',')[1], 
-                  lng: p.location.split(',')[0] 
-                })} 
-                className="w-full text-left px-5 py-4 rounded-2xl hover:bg-indigo-50 border border-transparent hover:border-indigo-100 group transition-all"
-              >
-                 <p className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{p.name}</p>
-                 <p className="text-[10px] text-slate-400 font-medium truncate">{p.address}</p>
-              </button>
-            ))}
-            {!isLocating && !isSearching && res.length === 0 && (
-              <div className="py-10 text-center space-y-2 opacity-20 grayscale">
-                 <MapPin size={40} className="mx-auto" />
-                 <p className="text-xs font-black uppercase">No places listed</p>
-              </div>
-            )}
-         </div>
-
-         {currentSelection && <button onClick={() => onSelect(null)} className="w-full py-4 text-red-500 font-bold text-xs uppercase tracking-widest hover:text-red-600 transition-colors">Clear Selection</button>}
-         <button onClick={onClose} className="w-full py-4 bg-slate-50 text-slate-400 rounded-2xl font-black text-xs transition-all hover:bg-slate-100">Cancel</button>
-      </motion.div>
-    </div>
+      {/* Clear Selection */}
+      {selectedPoint && (
+        <button 
+          onClick={() => setSelectedPoint(null)} 
+          className="w-full py-3 text-red-500 font-bold text-xs uppercase tracking-widest hover:text-red-600 transition-colors mt-4"
+        >
+          Clear Selection
+        </button>
+      )}
+    </SelectionModal>
   )
 }
