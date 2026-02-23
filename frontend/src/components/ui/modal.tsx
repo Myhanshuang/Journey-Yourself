@@ -40,21 +40,21 @@ export function Modal({
       initial: { opacity: 0, scale: 0.95, y: 0 },
       animate: { opacity: 1, scale: 1, y: 0 },
       exit: { opacity: 0, scale: 0.95, y: 0 },
-      container: "fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6",
+      container: "fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6",
       content: "w-full max-w-lg rounded-[40px] bg-white p-6 shadow-xl max-h-[85vh] flex flex-col"
     },
     sheet: {
       initial: { opacity: 0, y: "100%" },
       animate: { opacity: 1, y: 0 },
       exit: { opacity: 0, y: "100%" },
-      container: "fixed inset-0 z-50 flex items-end justify-center sm:items-center",
+      container: "fixed inset-0 z-[70] flex items-end justify-center sm:items-center",
       content: "w-full rounded-t-[32px] sm:rounded-[40px] bg-white shadow-xl max-h-[90vh] flex flex-col pb-safe" 
     },
     fullscreen: {
       initial: { opacity: 0, scale: 0.95, y: 20 },
       animate: { opacity: 1, scale: 1, y: 0 },
       exit: { opacity: 0, scale: 0.95, y: 20 },
-      container: "fixed inset-0 z-50 bg-background",
+      container: "fixed inset-0 z-[70] bg-background",
       content: "w-full h-full bg-background flex flex-col"
     }
   }
@@ -72,7 +72,7 @@ export function Modal({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={onClose}
-              className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm"
+              className="fixed inset-0 z-[60] bg-black/20 backdrop-blur-sm"
             />
           )}
 
