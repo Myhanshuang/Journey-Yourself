@@ -49,6 +49,7 @@ export default function SettingsView() {
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-indigo-400 ml-2">Administration</h3>
             <Card className="divide-y divide-slate-50 text-slate-900" padding="none">
               <SettingsRow icon={<UserPlus size={18} className="text-indigo-500" />} label="Provision Account" sub="Add new user or administrator" onClick={() => setActiveModal('createuser')} />
+              <SettingsRow icon={<Database size={18} className="text-amber-500" />} label="Maintenance" sub="Export/Import DB" onClick={() => setActiveModal('system')} />
             </Card>
           </div>
         )}
@@ -63,16 +64,13 @@ export default function SettingsView() {
           </Card>
         </div>
 
-        {user?.role === 'admin' && (
-          <div className="space-y-4">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-300 ml-2">System</h3>
-            <Card className="divide-y divide-slate-50 text-slate-900" padding="none">
-              <SettingsRow icon={<Link2 size={18} className="text-indigo-500" />} label="Share Manager" sub="Manage shared links" onClick={() => navigate('/shares')} />
-              <SettingsRow icon={<Timer size={18} className="text-emerald-500" />} label="Scheduled Tasks" sub="Manage automated tasks" onClick={() => navigate('/tasks')} />
-              <SettingsRow icon={<Database size={18} className="text-amber-500" />} label="Maintenance" sub="Export/Import DB" onClick={() => setActiveModal('system')} />
-            </Card>
-          </div>
-        )}
+        <div className="space-y-4">
+          <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-300 ml-2">System</h3>
+          <Card className="divide-y divide-slate-50 text-slate-900" padding="none">
+            <SettingsRow icon={<Link2 size={18} className="text-indigo-500" />} label="Share Manager" sub="Manage shared links" onClick={() => navigate('/shares')} />
+            <SettingsRow icon={<Timer size={18} className="text-emerald-500" />} label="Scheduled Tasks" sub="Manage automated tasks" onClick={() => navigate('/tasks')} />
+          </Card>
+        </div>
 
         <button onClick={handleLogout} className="w-full py-5 bg-red-50 text-red-500 rounded-[24px] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-red-100 transition-all shadow-sm">
           <LogOut size={16} /> Sign Out
