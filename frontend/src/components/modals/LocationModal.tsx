@@ -126,7 +126,7 @@ export default function LocationModal({ onSelect, onClose, currentSelection, isO
       </div>
 
       {/* 3. 结果挑选列表 */}
-      <div className="space-y-2">
+      <div className="space-y-2 max-h-[50vh] overflow-y-auto">
         {res.map((p: any) => {
           const isSelected = selectedPoint?.name === p.name
           return (

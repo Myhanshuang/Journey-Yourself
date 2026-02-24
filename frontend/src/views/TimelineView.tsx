@@ -64,14 +64,14 @@ export default function TimelineView() {
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="py-12 space-y-10 min-h-screen relative text-slate-900 max-w-[840px] mx-auto">
       <AnimatePresence>
         {daySelection && (
-          <div className="fixed inset-0 z-[100] bg-black/5 backdrop-blur-xl flex items-center justify-center p-6" onClick={() => setDaySelection(null)}>
-            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9 }} className="bg-white/90 p-12 rounded-[48px] max-w-2xl w-full shadow-2xl space-y-8" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 z-[100] bg-black/5 backdrop-blur-xl flex items-center justify-center p-4 md:p-6" onClick={() => setDaySelection(null)}>
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9 }} className="bg-white/90 p-6 md:p-12 rounded-[32px] md:rounded-[48px] max-w-sm md:max-w-2xl w-full shadow-2xl space-y-6 md:space-y-8" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between">
-                <h4 className="text-4xl font-black text-slate-900 tracking-tight">Memories</h4>
-                <button onClick={() => setDaySelection(null)} className="p-3 hover:bg-slate-50 rounded-2xl transition-all text-slate-400"><X size={24} /></button>
+                <h4 className="text-2xl md:text-4xl font-black text-slate-900 tracking-tight">Memories</h4>
+                <button onClick={() => setDaySelection(null)} className="p-2 md:p-3 hover:bg-slate-50 rounded-xl md:rounded-2xl transition-all text-slate-400"><X size={20} className="md:w-6 md:h-6" /></button>
               </div>
-              <div className="grid gap-6 max-h-[60vh] overflow-y-auto no-scrollbar pb-4">
-                {daySelection.map(d => <DiaryItemCard key={d.id} diary={d} size="md" onClick={() => { handleDiaryClick(d); setDaySelection(null); }} />)}
+              <div className="grid gap-4 md:gap-6 max-h-[60vh] overflow-y-auto no-scrollbar pb-4">
+                {daySelection.map(d => <DiaryItemCard key={d.id} diary={d} size="sm" onClick={() => { handleDiaryClick(d); setDaySelection(null); }} />)}
               </div>
             </motion.div>
           </div>

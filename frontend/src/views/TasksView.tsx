@@ -183,7 +183,7 @@ function TaskRow({
   const isActive = userEnabled && globallyEnabled
   
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-4 md:p-6 space-y-4">
       <div className="flex items-start justify-between">
         <button 
           onClick={onEdit}
@@ -337,7 +337,7 @@ function TaskEditModal({
       onConfirm={handleConfirm}
       title={task.display_name}
       subtitle="Configure task schedule"
-      confirmLabel="Save Changes"
+      confirmLabel="Save"
       loading={isPending}
       variant="sheet"
       className="md:max-w-md md:mx-auto"

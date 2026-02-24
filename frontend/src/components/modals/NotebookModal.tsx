@@ -4,8 +4,7 @@ import { X, Image as ImageIcon } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { notebookApi, assetApi } from '../../lib/api'
 import { useToast } from '../../hooks/useToast'
-import { cn } from '../../lib/utils'
-import { useIsMobile } from '../ui/JourneyUI'
+import { cn, getAssetUrl, useIsMobile } from '../ui/JourneyUI'
 
 interface NotebookModalProps {
   notebook?: any
@@ -66,7 +65,7 @@ export function NotebookModal({ notebook, onClose }: NotebookModalProps) {
           isMobile ? "w-full h-36" : "w-full h-48"
         )}>
           {fd.cover_url ? (
-            <img src={fd.cover_url} className="w-full h-full object-cover" />
+            <img src={getAssetUrl(fd.cover_url)} className="w-full h-full object-cover" />
           ) : (
             <div className="flex flex-col items-center opacity-30">
               <ImageIcon size={isMobile ? 28 : 36} className="mb-1" />
@@ -124,6 +123,15 @@ export function NotebookModal({ notebook, onClose }: NotebookModalProps) {
         {/* 操作按钮 */}
         <div className="flex gap-3">
           <button
+            onClick={() => onClose()}
+            className={cn(
+              "flex-1 bg-slate-50 text-slate-400 rounded-[20px] font-black text-xs uppercase hover:bg-slate-100 transition-all",
+              isMobile ? "py-4" : "py-5"
+            )}
+          >
+            Cancel
+          </button>
+          <button
             onClick={() => mutation.mutate(fd)}
             disabled={mutation.isPending || uploading}
             className={cn(
@@ -132,15 +140,6 @@ export function NotebookModal({ notebook, onClose }: NotebookModalProps) {
             )}
           >
             {mutation.isPending ? 'Saving...' : 'Save Identity'}
-          </button>
-          <button
-            onClick={() => onClose()}
-            className={cn(
-              "flex-1 bg-slate-50 text-slate-400 rounded-[20px] font-black text-xs uppercase hover:bg-slate-100 transition-all",
-              isMobile ? "py-4" : "py-5"
-            )}
-          >
-            Cancel
           </button>
         </div>
       </motion.div>
