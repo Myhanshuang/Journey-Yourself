@@ -63,14 +63,16 @@ export default function SettingsView() {
           </Card>
         </div>
 
-        <div className="space-y-4">
-          <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-300 ml-2">System</h3>
-          <Card className="divide-y divide-slate-50 text-slate-900" padding="none">
-            <SettingsRow icon={<Link2 size={18} className="text-indigo-500" />} label="Share Manager" sub="Manage shared links" onClick={() => navigate('/shares')} />
-            <SettingsRow icon={<Timer size={18} className="text-emerald-500" />} label="Scheduled Tasks" sub="Manage automated tasks" onClick={() => navigate('/tasks')} />
-            <SettingsRow icon={<Database size={18} className="text-amber-500" />} label="Maintenance" sub="Export/Import DB" onClick={() => setActiveModal('system')} />
-          </Card>
-        </div>
+        {user?.role === 'admin' && (
+          <div className="space-y-4">
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-300 ml-2">System</h3>
+            <Card className="divide-y divide-slate-50 text-slate-900" padding="none">
+              <SettingsRow icon={<Link2 size={18} className="text-indigo-500" />} label="Share Manager" sub="Manage shared links" onClick={() => navigate('/shares')} />
+              <SettingsRow icon={<Timer size={18} className="text-emerald-500" />} label="Scheduled Tasks" sub="Manage automated tasks" onClick={() => navigate('/tasks')} />
+              <SettingsRow icon={<Database size={18} className="text-amber-500" />} label="Maintenance" sub="Export/Import DB" onClick={() => setActiveModal('system')} />
+            </Card>
+          </div>
+        )}
 
         <button onClick={handleLogout} className="w-full py-5 bg-red-50 text-red-500 rounded-[24px] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-red-100 transition-all shadow-sm">
           <LogOut size={16} /> Sign Out
@@ -139,7 +141,7 @@ function AIModal({ user, onClose }: any) {
             if (!form.key) return addToast('error', 'API Key required')
             mutation.mutate({ provider: form.provider, base_url: form.base_url, api_key: form.key, model: form.model, language: form.language })
         }}
-        confirmLabel={mutation.isPending ? 'Verifying...' : 'Verify & Enable'}
+        confirmLabel={mutation.isPending ? 'Verifying...' : 'Enable'}
         loading={mutation.isPending}
         className="md:max-w-md md:mx-auto"
     >
@@ -211,7 +213,7 @@ function KarakeepModal({ user, onClose }: any) {
             if (!form.url || !form.key) return addToast('error', 'URL and Key required')
             mutation.mutate({ url: form.url, api_key: form.key })
         }}
-        confirmLabel={mutation.isPending ? 'Verifying...' : 'Verify & Link'}
+        confirmLabel={mutation.isPending ? 'Verifying...' : 'Link'}
         loading={mutation.isPending}
         className="md:max-w-md md:mx-auto"
     >
@@ -252,7 +254,7 @@ function CreateUserModal({ onClose }: any) {
         isOpen={true} onClose={onClose} 
         title="Provision Account"
         onConfirm={() => mutation.mutate(form)}
-        confirmLabel="Create Account"
+        confirmLabel="Create"
         loading={mutation.isPending}
         className="md:max-w-md md:mx-auto"
     >
@@ -379,7 +381,7 @@ function TimeOffsetModal({ user, onClose }: any) {
         isOpen={true} onClose={onClose} 
         title="Time Correction"
         onConfirm={() => mutation.mutate({ time_offset_mins: mins })}
-        confirmLabel="Apply Calibration"
+        confirmLabel="Apply"
         loading={mutation.isPending}
         className="md:max-w-md md:mx-auto"
     >
@@ -427,7 +429,7 @@ function ImmichModal({ user, onClose }: any) {
             if (!form.url || !form.key) return addToast('error', 'URL and Key required')
             mutation.mutate({ url: form.url, api_key: form.key })
         }}
-        confirmLabel={mutation.isPending ? 'Verifying...' : 'Verify & Link'}
+        confirmLabel={mutation.isPending ? 'Verifying...' : 'Link'}
         loading={mutation.isPending}
         className="md:max-w-md md:mx-auto"
     >
@@ -480,7 +482,7 @@ function GeoModal({ user, onClose }: any) {
             if (!form.key) return addToast('error', 'API Key required')
             mutation.mutate({ provider: form.provider, api_key: form.key })
         }}
-        confirmLabel={mutation.isPending ? 'Verifying...' : 'Verify & Bind'}
+        confirmLabel={mutation.isPending ? 'Verifying...' : 'Bind'}
         loading={mutation.isPending}
         className="md:max-w-md md:mx-auto"
     >
