@@ -266,8 +266,8 @@ async def process_user_daily_summary(user_id: int):
                         "url": b_url,
                         "title": b_title,
                         "description": b_desc,
-                        "image": b_image,
-                        "karakeepUrl": karakeep_bookmark_url
+                        "image": b_image
+                        # "karakeepUrl": karakeep_bookmark_url
                     }
                 }
                 content_json["content"].append(bookmark_node)
