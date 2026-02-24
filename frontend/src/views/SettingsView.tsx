@@ -75,6 +75,10 @@ export default function SettingsView() {
         <button onClick={handleLogout} className="w-full py-5 bg-red-50 text-red-500 rounded-[24px] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-red-100 transition-all shadow-sm">
           <LogOut size={16} /> Sign Out
         </button>
+
+        <div className="text-center text-xs text-slate-300 font-medium pt-8">
+          v0.1.0
+        </div>
       </div>
 
       <AnimatePresence>
