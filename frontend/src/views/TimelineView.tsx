@@ -61,7 +61,7 @@ export default function TimelineView() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-12 space-y-10 min-h-screen relative text-slate-900 max-w-[840px] mx-auto">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="py-12 space-y-10 min-h-screen relative text-slate-900 max-w-[840px] mx-auto">
       <AnimatePresence>
         {daySelection && (
           <div className="fixed inset-0 z-[100] bg-black/5 backdrop-blur-xl flex items-center justify-center p-6" onClick={() => setDaySelection(null)}>

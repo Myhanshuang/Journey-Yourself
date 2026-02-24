@@ -31,7 +31,7 @@ export default function HomeView() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12 md:space-y-20 pb-40 text-[#232f55]">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-12 md:space-y-20 pb-40 text-[#232f55]">
       {/* 问候语区 */}
       <section className="flex items-end justify-between px-2 pt-4">
         <div className="space-y-2 md:space-y-3">
