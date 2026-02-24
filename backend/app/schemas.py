@@ -108,6 +108,11 @@ class ShareCreate(BaseModel):
     expires_in_days: Optional[int] = 7  # 默认7天过期，None 表示永不过期
 
 
+class ShareUpdate(BaseModel):
+    """更新分享请求"""
+    expires_at: Optional[datetime] = None  # None 表示永不过期
+
+
 class ShareRead(BaseModel):
     """分享信息"""
     id: int

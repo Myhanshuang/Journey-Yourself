@@ -3,9 +3,11 @@ import { motion } from 'framer-motion'
 import { ChevronLeft, X, Loader2, Bookmark, ExternalLink } from 'lucide-react'
 import { karakeepApi } from '../../lib/api'
 import { useInfiniteQuery } from '@tanstack/react-query'
+import { useAdjustedTime } from '../ui/JourneyUI'
 
 export default function KarakeepPicker({ onSelect, onClose }: any) {
   const observer = useRef<IntersectionObserver | null>(null)
+  const { getAdjusted } = useAdjustedTime()
 
   const { 
     data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading 
@@ -29,6 +31,11 @@ export default function KarakeepPicker({ onSelect, onClose }: any) {
     })
     if (node) observer.current.observe(node)
   }, [isLoading, isFetchingNextPage, hasNextPage, fetchNextPage])
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return 'Unknown Date'
+    return getAdjusted(dateStr).toLocaleDateString()
+  }
 
   return (
     <motion.div 
@@ -77,7 +84,7 @@ export default function KarakeepPicker({ onSelect, onClose }: any) {
                         <p className="text-xs text-slate-400 mt-2 line-clamp-2 font-medium">{bookmark.description || bookmark.url}</p>
                     </div>
                     <div className="mt-auto pt-4 flex items-center gap-2 text-[10px] font-bold text-slate-300 uppercase tracking-wider">
-                        <span>{bookmark.created_at ? new Date(bookmark.created_at).toLocaleDateString() : 'Unknown Date'}</span>
+                        <span>{formatDate(bookmark.created_at)}</span>
                     </div>
                  </motion.button>
                ))}

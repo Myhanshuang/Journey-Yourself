@@ -136,6 +136,7 @@ export const userApi = {
 export const shareApi = {
   list: async () => (await api.get('/share/')).data,
   create: async (data: { diary_id?: number; notebook_id?: number; expires_in_days?: number | null }) => (await api.post('/share/', data)).data,
+  update: async (id: number, data: { expires_at: string | null }) => (await api.patch(`/share/${id}`, data)).data,
   delete: async (id: number) => (await api.delete(`/share/${id}`)).data,
   getPublic: async (token: string) => (await api.get(`/share/${token}`)).data
 }

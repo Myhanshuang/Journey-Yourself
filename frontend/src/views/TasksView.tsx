@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
-import { Timer, ChevronLeft, Clock, CheckCircle2, XCircle, ChevronRight, Plus, Minus } from 'lucide-react'
+import { useState } from 'react'
+import { Timer, ChevronLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { taskApi, userApi } from '../lib/api'
-import { Card, useToast, cn } from '../components/ui/JourneyUI'
+import { taskApi } from '../lib/api'
+import { Card, useToast, cn, ManageListItem, useAdjustedTime, TimePicker } from '../components/ui/JourneyUI'
 import { SelectionModal } from '../components/ui/selection-modal'
 
 interface Task {
@@ -18,10 +18,6 @@ interface Task {
   user_enabled: boolean
 }
 
-interface UserData {
-  timezone: string
-}
-
 export default function TasksView() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -31,11 +27,6 @@ export default function TasksView() {
   const { data: tasks, isLoading } = useQuery<Task[]>({
     queryKey: ['tasks'],
     queryFn: taskApi.list
-  })
-  
-  const { data: user } = useQuery<UserData>({
-    queryKey: ['user', 'me'],
-    queryFn: userApi.me
   })
   
   const toggleMutation = useMutation({
@@ -63,66 +54,25 @@ export default function TasksView() {
     }
   })
 
-  const formatTime = (isoString: string | null) => {
-    if (!isoString) return 'Never'
-    const date = new Date(isoString)
-    return date.toLocaleString()
-  }
-
-  const getCronDescription = (cronExpr: string, timezone?: string) => {
-    // 解析 cron 表达式获取 UTC 时间
-    const parts = cronExpr.split(' ')
-    if (parts.length !== 5) return cronExpr
-    
-    const minute = parseInt(parts[0]) || 0
-    const hour = parseInt(parts[1]) || 0
-    
-    // 计算用户时区的时间
-    const tz = timezone || 'UTC'
-    try {
-      const utcDate = new Date()
-      utcDate.setUTCHours(hour, minute, 0, 0)
-      const localHour = utcDate.toLocaleString('en-US', { hour: '2-digit', hour12: false, timeZone: tz })
-      const localMinute = utcDate.toLocaleString('en-US', { minute: '2-digit', timeZone: tz })
-      const localHourNum = parseInt(localHour)
-      
-      // 判断频率
-      if (parts[2] === '*' && parts[3] === '*' && parts[4] === '*') {
-        return `Daily at ${localHourNum.toString().padStart(2, '0')}:${localMinute} (${tz})`
-      } else if (parts[4] === '0') {
-        return `Weekly on Sunday at ${localHourNum.toString().padStart(2, '0')}:${localMinute} (${tz})`
-      } else if (parts[2] === '1') {
-        return `Monthly on 1st at ${localHourNum.toString().padStart(2, '0')}:${localMinute} (${tz})`
-      }
-    } catch {
-      // fallback
-    }
-    
-    return cronExpr
-  }
-
   if (isLoading) {
     return (
-      <div className="p-20 text-slate-400 font-black animate-pulse uppercase tracking-widest text-xs">
-        Loading Tasks...
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="w-12 h-12 border-4 border-[#6ebeea]/30 border-t-[#6ebeea] rounded-full animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="py-12 max-w-[700px] mx-auto space-y-8 pb-32"
-    >
-      <header className="flex items-center gap-4">
+    <div className="py-12 max-w-[700px] mx-auto space-y-8 pb-32">
+      <header className="space-y-2 px-3 md:px-0">
         <button 
           onClick={() => navigate('/settings')}
-          className="p-3 hover:bg-slate-100 rounded-xl transition-all"
+          className="flex items-center gap-2 text-slate-400 hover:text-slate-900 font-bold transition-all mb-6"
         >
-          <ChevronLeft size={24} className="text-slate-400" />
+          <ChevronLeft size={20} /> Settings
         </button>
-        <div className="space-y-1">
-          <h2 className="text-4xl font-black tracking-tight text-slate-900">Scheduled Tasks</h2>
-          <p className="text-sm text-slate-400 font-medium">Manage automated background tasks</p>
-        </div>
+        <h2 className="text-4xl md:text-5xl font-black tracking-tight text-slate-900">Scheduled Tasks</h2>
+        <p className="text-lg md:text-xl text-slate-400 font-medium italic">Manage automated background tasks</p>
       </header>
 
       <Card className="divide-y divide-slate-100">
@@ -132,13 +82,11 @@ export default function TasksView() {
             task={task}
             onToggle={() => toggleMutation.mutate({ name: task.name, enabled: !task.user_enabled })}
             onEdit={() => setEditingTask(task)}
-            formatTime={formatTime}
-            getCronDescription={(expr) => getCronDescription(expr, user?.timezone)}
           />
         ))}
         
         {(!tasks || tasks.length === 0) && (
-          <div className="p-12 text-center text-slate-400">
+          <div className="p-8 md:p-12 text-center text-slate-400">
             <Timer size={48} className="mx-auto mb-4 opacity-50" />
             <p className="font-medium">No scheduled tasks configured</p>
           </div>
@@ -148,7 +96,6 @@ export default function TasksView() {
       {editingTask && (
         <TaskEditModal
           task={editingTask}
-          timezone={user?.timezone || 'UTC'}
           onClose={() => setEditingTask(null)}
           onSave={(cronExpr, isEnabled) => {
             updateMutation.mutate({ 
@@ -163,166 +110,158 @@ export default function TasksView() {
   )
 }
 
+// Task Row 组件
 function TaskRow({ 
   task, 
   onToggle, 
-  onEdit, 
-  formatTime, 
-  getCronDescription 
+  onEdit
 }: { 
   task: Task
   onToggle: () => void
   onEdit: () => void
-  formatTime: (s: string | null) => string
-  getCronDescription: (s: string) => string
 }) {
-  // 滑块只控制用户的个人开关
-  // 任务实际生效需要：全局启用 + 用户启用
   const userEnabled = task.user_enabled
   const globallyEnabled = task.is_enabled
   const isActive = userEnabled && globallyEnabled
-  
+
   return (
-    <div className="p-4 md:p-6 space-y-4">
-      <div className="flex items-start justify-between">
-        <button 
-          onClick={onEdit}
-          className="flex items-center gap-4 text-left flex-1 group"
-        >
-          <div className={cn(
-            "w-12 h-12 rounded-2xl flex items-center justify-center",
-            isActive ? "bg-emerald-50 text-emerald-500" : "bg-slate-100 text-slate-400"
-          )}>
-            <Timer size={24} />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-bold text-lg text-slate-900 group-hover:text-indigo-600 transition-colors">
-              {task.display_name}
-            </h3>
-            <p className="text-sm text-slate-500">
-              {task.description}
-              {!globallyEnabled && <span className="text-amber-500 ml-1">(Globally Disabled)</span>}
-            </p>
-          </div>
-          <ChevronRight size={18} className="text-slate-200 group-hover:text-slate-400 group-hover:translate-x-1 transition-all" />
-        </button>
-        
+    <ManageListItem
+      icon={<Timer size={20} />}
+      iconBgClass={isActive ? "bg-emerald-50 text-emerald-500" : "bg-slate-100 text-slate-400"}
+      title={task.display_name}
+      subtitle={task.description + (!globallyEnabled ? ' (Globally Disabled)' : '')}
+      leftAction={
         <button
           onClick={(e) => {
             e.stopPropagation()
             onToggle()
           }}
           className={cn(
-            "relative w-14 h-8 rounded-full transition-all duration-300 ml-4 flex-shrink-0",
+            "relative w-12 h-7 rounded-full transition-all duration-300 flex-shrink-0",
             userEnabled ? "bg-emerald-500" : "bg-slate-200"
           )}
         >
           <div className={cn(
-            "absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300",
-            userEnabled ? "right-1" : "left-1"
+            "absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300",
+            userEnabled ? "right-0.5" : "left-0.5"
           )} />
         </button>
-      </div>
-      
-      <div className="flex items-center gap-6 ml-16 text-xs text-slate-400">
-        <div className="flex items-center gap-2">
-          <Clock size={14} />
-          <span>{getCronDescription(task.cron_expr)}</span>
-        </div>
-        
-        {isActive && (
-          <>
-            <div className="flex items-center gap-2">
-              {task.last_run ? (
-                <>
-                  <CheckCircle2 size={14} className="text-emerald-500" />
-                  <span>Last: {formatTime(task.last_run)}</span>
-                </>
-              ) : (
-                <>
-                  <XCircle size={14} />
-                  <span>Last: Never</span>
-                </>
-              )}
-            </div>
-            
-            {task.next_run && (
-              <div className="flex items-center gap-2">
-                <span>Next: {formatTime(task.next_run)}</span>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
+      }
+      onClick={onEdit}
+    />
   )
 }
 
 function TaskEditModal({ 
   task, 
-  timezone,
   onClose, 
   onSave, 
   isPending 
 }: { 
   task: Task
-  timezone: string
   onClose: () => void
   onSave: (cronExpr: string, isEnabled: boolean) => void
   isPending: boolean
 }) {
-  // 解析 cron 表达式获取小时和分钟
+  const { timezone } = useAdjustedTime()
+
+  // 解析 cron 表达式获取 UTC 小时和分钟，然后转换为用户本地时间
   const parseCron = (cronExpr: string) => {
     const parts = cronExpr.split(' ')
     if (parts.length !== 5) return { hour: 0, minute: 0, dayOfMonth: '*', dayOfWeek: '*' }
-    return {
-      minute: parseInt(parts[0]) || 0,
-      hour: parseInt(parts[1]) || 0,
-      dayOfMonth: parts[2],
-      month: parts[3],
-      dayOfWeek: parts[4]
+    
+    const utcMinute = parseInt(parts[0]) || 0
+    const utcHour = parseInt(parts[1]) || 0
+    
+    // 将 UTC 时间转换为用户本地时间
+    try {
+      const utcDate = new Date()
+      utcDate.setUTCHours(utcHour, utcMinute, 0, 0)
+      
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone || 'UTC',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      })
+      const parts_result = formatter.formatToParts(utcDate)
+      const map: Record<string, string> = {}
+      parts_result.forEach(p => map[p.type] = p.value)
+      
+      return {
+        minute: parseInt(map.minute) || 0,
+        hour: parseInt(map.hour) || 0,
+        dayOfMonth: parts[2],
+        month: parts[3],
+        dayOfWeek: parts[4]
+      }
+    } catch {
+      return {
+        minute: utcMinute,
+        hour: utcHour,
+        dayOfMonth: parts[2],
+        month: parts[3],
+        dayOfWeek: parts[4]
+      }
     }
   }
   
   const initial = parseCron(task.cron_expr)
-  const [hour, setHour] = useState(initial.hour)
-  const [minute, setMinute] = useState(initial.minute)
+  const [time, setTime] = useState(
+    `${initial.hour.toString().padStart(2, '0')}:${initial.minute.toString().padStart(2, '0')}`
+  )
   const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly'>(
     initial.dayOfMonth === '*' && initial.dayOfWeek === '*' ? 'daily' :
     initial.dayOfWeek !== '*' ? 'weekly' : 'monthly'
   )
   const [isEnabled, setIsEnabled] = useState(task.is_enabled)
   
-  // 实时预览用户时区的时间
-  const [previewTime, setPreviewTime] = useState<string>('')
-  
-  useEffect(() => {
-    try {
-      const utcDate = new Date()
-      utcDate.setUTCHours(hour, minute, 0, 0)
-      const localTime = utcDate.toLocaleString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: false,
-        timeZone: timezone 
-      })
-      setPreviewTime(`${localTime} (${timezone})`)
-    } catch {
-      setPreviewTime(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} UTC`)
-    }
-  }, [hour, minute, timezone])
-  
+  // 将用户本地时间转换为 UTC 时间，构建 cron 表达式
   const buildCronExpr = () => {
-    const minuteStr = minute.toString().padStart(2, '0')
-    const hourStr = hour.toString().padStart(2, '0')
+    const [hour, minute] = time.split(':').map(Number)
     
-    switch (frequency) {
-      case 'daily':
-        return `${minuteStr} ${hourStr} * * *`
-      case 'weekly':
-        return `${minuteStr} ${hourStr} * * 0`
-      case 'monthly':
-        return `${minuteStr} ${hourStr} 1 * *`
+    try {
+      // 用户输入的是本地时间，需要转换为 UTC
+      const tz = timezone || 'UTC'
+      
+      // 创建一个本地时间
+      const localDateStr = `2024-01-01T${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`
+      const localDate = new Date(localDateStr)
+      
+      // 计算时区偏移
+      const utcDate = new Date(localDate.toLocaleString('en-US', { timeZone: 'UTC' }))
+      const tzDate = new Date(localDate.toLocaleString('en-US', { timeZone: tz }))
+      const offsetMs = utcDate.getTime() - tzDate.getTime()
+      
+      // 转换后的 UTC 时间
+      const utcTime = new Date(localDate.getTime() + offsetMs)
+      const utcHour = utcTime.getUTCHours()
+      const utcMinute = utcTime.getUTCMinutes()
+      
+      const minuteStr = utcMinute.toString().padStart(2, '0')
+      const hourStr = utcHour.toString().padStart(2, '0')
+      
+      switch (frequency) {
+        case 'daily':
+          return `${minuteStr} ${hourStr} * * *`
+        case 'weekly':
+          return `${minuteStr} ${hourStr} * * 0`
+        case 'monthly':
+          return `${minuteStr} ${hourStr} 1 * *`
+      }
+    } catch {
+      // fallback: 直接使用用户输入的时间作为 UTC
+      const minuteStr = minute.toString().padStart(2, '0')
+      const hourStr = hour.toString().padStart(2, '0')
+      
+      switch (frequency) {
+        case 'daily':
+          return `${minuteStr} ${hourStr} * * *`
+        case 'weekly':
+          return `${minuteStr} ${hourStr} * * 0`
+        case 'monthly':
+          return `${minuteStr} ${hourStr} 1 * *`
+      }
     }
   }
 
@@ -336,7 +275,7 @@ function TaskEditModal({
       onClose={onClose}
       onConfirm={handleConfirm}
       title={task.display_name}
-      subtitle="Configure task schedule"
+      subtitle={task.description}
       confirmLabel="Save"
       loading={isPending}
       variant="sheet"
@@ -384,76 +323,17 @@ function TaskEditModal({
           </div>
         </div>
         
-        {/* Time Selection - Hour/Minute Controls */}
-        <div className="space-y-4">
+        {/* Time Input */}
+        <div className="space-y-3">
           <label className="text-[10px] font-black uppercase text-slate-300 ml-2 tracking-widest">
-            Time (UTC)
+            Time
           </label>
-          
-          <div className="flex items-center gap-4">
-            <TimeControl 
-              label="Hour" 
-              value={hour} 
-              min={0} 
-              max={23} 
-              onChange={setHour} 
-            />
-            <span className="text-2xl font-black text-slate-300">:</span>
-            <TimeControl 
-              label="Minute" 
-              value={minute} 
-              min={0} 
-              max={59} 
-              onChange={setMinute} 
-            />
-          </div>
-          
-          {/* Preview in user's timezone */}
-          <div className="text-center p-4 bg-slate-900 rounded-2xl text-white">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">
-              Your Local Time
-            </p>
-            <p className="text-2xl font-black">{previewTime}</p>
-          </div>
+          <TimePicker
+            value={time}
+            onChange={setTime}
+          />
         </div>
       </div>
     </SelectionModal>
-  )
-}
-
-function TimeControl({ 
-  label, 
-  value, 
-  min, 
-  max, 
-  onChange 
-}: { 
-  label: string
-  value: number
-  min: number
-  max: number
-  onChange: (v: number) => void
-}) {
-  return (
-    <div className="flex-1 flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-100">
-      <button 
-        onClick={() => onChange(value > min ? value - 1 : max)}
-        className="p-2 bg-white rounded-xl shadow-sm hover:bg-emerald-50 hover:text-emerald-500 transition-all"
-      >
-        <Minus size={16} />
-      </button>
-      <div className="text-center">
-        <span className="text-2xl font-black w-12 text-center text-slate-900 tabular-nums">
-          {value.toString().padStart(2, '0')}
-        </span>
-        <p className="text-[10px] text-slate-400 font-bold uppercase">{label}</p>
-      </div>
-      <button 
-        onClick={() => onChange(value < max ? value + 1 : min)}
-        className="p-2 bg-white rounded-xl shadow-sm hover:bg-emerald-50 hover:text-emerald-500 transition-all"
-      >
-        <Plus size={16} />
-      </button>
-    </div>
   )
 }

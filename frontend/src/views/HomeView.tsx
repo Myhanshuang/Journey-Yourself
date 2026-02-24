@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { diaryApi, userApi } from '../lib/api'
-import { DiaryItemCard } from '../components/ui/JourneyUI'
+import { DiaryItemCard, useAdjustedTime } from '../components/ui/JourneyUI'
 import { Sparkles } from 'lucide-react'
 
 interface OutletContextType {
@@ -14,13 +14,15 @@ interface OutletContextType {
 export default function HomeView() {
   const navigate = useNavigate()
   const outletContext = useOutletContext<OutletContextType>()
+  const { getAdjusted } = useAdjustedTime()
 
   const { data: user } = useQuery({ queryKey: ['user', 'me'], queryFn: userApi.me })
   const { data: recent = [] } = useQuery({ queryKey: ['diaries', 'recent'], queryFn: () => diaryApi.recent() })
   const { data: lastYear = [] } = useQuery({ queryKey: ['diaries', 'lastYear'], queryFn: diaryApi.lastYearToday })
 
   const Greeting = () => {
-    const hr = new Date().getHours()
+    const now = getAdjusted(new Date().toISOString())
+    const hr = now.getHours()
     if (hr < 12) return 'Morning'
     if (hr < 18) return 'Afternoon'
     return 'Evening'
