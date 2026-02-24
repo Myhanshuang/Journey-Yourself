@@ -7,6 +7,17 @@ import { clsx, type ClassValue } from 'clsx'
 export const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs))
 
 /**
+ * Get base URL for share links (use server_url on mobile, otherwise window.location.origin)
+ */
+export const getBaseUrl = (): string => {
+  const serverUrl = localStorage.getItem('server_url')
+  if (serverUrl) {
+    return serverUrl.replace(/\/$/, '')
+  }
+  return window.location.origin
+}
+
+/**
  * Resolve asset URL (prepend server URL if relative and needed)
  */
 export const getAssetUrl = (url: string | null | undefined): string | undefined => {

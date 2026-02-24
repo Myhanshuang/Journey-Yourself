@@ -3,7 +3,7 @@ import { ChevronLeft, Edit3, Trash2, Link2, Copy, Check, X } from 'lucide-react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom'
 import { diaryApi, notebookApi, shareApi } from '../lib/api'
-import { DiaryListItem, useToast, useConfirm, journeySpring, cn, useIsMobile, ActionMenu, getAssetUrl } from '../components/ui/JourneyUI'
+import { DiaryListItem, useToast, useConfirm, journeySpring, cn, useIsMobile, ActionMenu, getAssetUrl, getBaseUrl } from '../components/ui/JourneyUI'
 import { useState } from 'react'
 
 interface OutletContextType {
@@ -84,7 +84,7 @@ export default function NotebookDetailView() {
   const shareMutation = useMutation({
     mutationFn: () => shareApi.create({ notebook_id: Number(id), expires_in_days: 7 }),
     onSuccess: (data) => {
-      const url = `${window.location.origin}/share/${data.token}`
+      const url = `${getBaseUrl()}/share/${data.token}`
       setShareLink(url)
       addToast('success', 'Share link created')
     },

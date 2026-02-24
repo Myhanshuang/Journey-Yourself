@@ -9,7 +9,7 @@ import { ChevronRight, Trash2, Loader2 } from 'lucide-react'
 import { useMotionValue, useTransform } from 'framer-motion'
 
 // Re-export from new locations
-export { cn, getFirstImage, extractSnippet, getAssetUrl } from '../../lib/utils'
+export { cn, getFirstImage, extractSnippet, getAssetUrl, getBaseUrl } from '../../lib/utils'
 export { journeySpring, viewTransition } from '../../lib/constants'
 export { useToast, ToastContainer } from '../../hooks/useToast'
 export { useConfirm, GlobalConfirmModal } from '../../hooks/useConfirm'

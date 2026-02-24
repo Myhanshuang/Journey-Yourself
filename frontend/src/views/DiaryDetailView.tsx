@@ -3,7 +3,7 @@ import {
   ChevronLeft, Edit3, Clock, RotateCw, Trash2, Tag,
   MapPin, Sun, Cloud, CloudRain, Wind, Snowflake, CloudLightning, Link2, Copy, Check, X
 } from 'lucide-react'
-import { useAdjustedTime, useConfirm, useToast, journeySpring, useIsMobile, cn, ActionMenu } from '../components/ui/JourneyUI'
+import { useAdjustedTime, useConfirm, useToast, journeySpring, useIsMobile, cn, ActionMenu, getBaseUrl } from '../components/ui/JourneyUI'
 import { diaryApi, shareApi } from '../lib/api'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
@@ -111,7 +111,7 @@ export default function DiaryDetailView() {
   const shareMutation = useMutation({
     mutationFn: () => shareApi.create({ diary_id: Number(id), expires_in_days: 7 }),
     onSuccess: (data) => {
-      const url = `${window.location.origin}/share/${data.token}`
+      const url = `${getBaseUrl()}/share/${data.token}`
       setShareLink(url)
       addToast('success', 'Share link created')
     },
