@@ -51,7 +51,7 @@ export function GlobalConfirmModal() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="w-full rounded-t-[32px] sm:rounded-[40px] bg-white shadow-xl max-h-[90vh] flex flex-col pb-safe pointer-events-auto max-w-md"
+              className="w-full rounded-t-[40px] sm:rounded-t-[40px] sm:rounded-b-[40px] overflow-hidden bg-white shadow-xl max-h-[90vh] flex flex-col pb-safe pointer-events-auto max-w-md"
             >
               {/* Header */}
               <div className="flex-none px-6 pt-6 pb-4">

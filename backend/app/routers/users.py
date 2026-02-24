@@ -7,7 +7,7 @@ from app.auth import get_current_user, get_password_hash, verify_password
 from app.security import encrypt_data, decrypt_data
 from app.schemas import UserUpdate, UserCreate
 from pydantic import BaseModel
-from typing import Optional, Any
+from typing import Optional, Any, List
 from datetime import datetime
 import shutil
 import os
@@ -62,6 +62,102 @@ async def create_user_admin(user_in: UserCreate, current_user: User = Depends(ge
     session.add(new_user)
     session.commit()
     return {"status": "ok", "message": f"Created {user_in.username} as {new_user.role}"}
+
+# === Admin User Management APIs ===
+
+from app.schemas import UserAdminRead
+
+class RoleUpdate(BaseModel):
+    role: str
+
+class PasswordReset(BaseModel):
+    new_password: str
+
+@router.get("/", response_model=List[UserAdminRead])
+async def list_users(current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    """获取所有用户列表（仅管理员）"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin only")
+    users = session.exec(select(User)).all()
+    return [
+        UserAdminRead(
+            id=u.id,
+            username=u.username,
+            role=u.role,
+            timezone=u.timezone,
+            time_offset_mins=u.time_offset_mins,
+            has_immich_key=bool(u.immich_api_key),
+            has_karakeep_key=bool(u.karakeep_api_key),
+            has_ai_key=bool(u.ai_api_key),
+            has_geo_key=bool(u.geo_api_key),
+            ai_provider=u.ai_provider,
+            geo_provider=u.geo_provider
+        ) for u in users
+    ]
+
+@router.patch("/{user_id}/role", response_model=dict)
+async def update_user_role(user_id: int, role_in: RoleUpdate, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    """更新用户角色（仅管理员）"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    target_user = session.get(User, user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # 不能修改自己的角色
+    if target_user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot modify your own role")
+    
+    # 不能修改主管理员的角色
+    if target_user.id == 1:
+        raise HTTPException(status_code=400, detail="Cannot modify the primary administrator")
+    
+    try:
+        target_user.role = UserRole(role_in.role)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid role")
+    
+    session.add(target_user)
+    session.commit()
+    return {"status": "ok", "message": f"Role updated to {role_in.role}"}
+
+@router.patch("/{user_id}/password", response_model=dict)
+async def reset_user_password(user_id: int, pw_in: PasswordReset, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    """重置用户密码（仅管理员）"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    target_user = session.get(User, user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    target_user.hashed_password = get_password_hash(pw_in.new_password)
+    session.add(target_user)
+    session.commit()
+    return {"status": "ok", "message": "Password reset"}
+
+@router.delete("/{user_id}", response_model=dict)
+async def delete_user(user_id: int, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    """删除用户（仅管理员）"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    target_user = session.get(User, user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # 不能删除自己
+    if target_user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot delete yourself")
+    
+    # 不能删除主管理员
+    if target_user.id == 1:
+        raise HTTPException(status_code=400, detail="Cannot delete the primary administrator")
+    
+    session.delete(target_user)
+    session.commit()
+    return {"status": "ok", "message": f"User {target_user.username} deleted"}
 
 @router.get("/me")
 async def read_user_me(current_user: User = Depends(get_current_user)):
