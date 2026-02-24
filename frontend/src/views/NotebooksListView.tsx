@@ -42,7 +42,7 @@ export default function NotebooksListView() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-8 md:py-12 space-y-8 md:space-y-12">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="py-8 md:py-12 space-y-8 md:space-y-12">
       <header className="flex items-start md:items-end justify-between gap-4">
         <div className="space-y-1 md:space-y-2">
           <h2 className="text-5xl md:text-6xl font-black tracking-tighter text-slate-900 leading-none">Collections</h2>
@@ -62,20 +62,21 @@ export default function NotebooksListView() {
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-slate-200"><BookOpen size={48} /></div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 z-10 bg-[#f2f4f2]/75 backdrop-blur-[1px]" />
+                <div className="absolute inset-0 z-20 bg-gradient-to-br from-[#f2f4f2]/95 via-[#f2f4f2]/40 to-transparent" />
 
                 {/* 底部悬浮信息 */}
-                <div className="absolute inset-0 p-4 md:p-8 flex flex-col justify-end text-white pointer-events-none">
+                <div className="absolute inset-0 z-30 p-4 md:p-8 flex flex-col justify-end text-[#232f55] pointer-events-none">
                   <h3 className="text-xl md:text-3xl font-black tracking-tight mb-1 md:mb-2 translate-y-2 group-hover:translate-y-0 transition-transform duration-500">{nb.name}</h3>
-                  <p className="text-white/60 text-[10px] md:text-xs font-bold uppercase tracking-widest line-clamp-2 opacity-0 group-hover:opacity-100 transition-all duration-500 delay-75 mb-2 md:mb-4">{nb.description || "The unwritten chapters of your journey."}</p>
+                  <p className="text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-widest line-clamp-2 opacity-0 group-hover:opacity-100 transition-all duration-500 delay-75 mb-2 md:mb-4">{nb.description || "The unwritten chapters of your journey."}</p>
 
-                  <div className="flex items-center justify-between border-t border-white/10 pt-2 md:pt-4 opacity-0 group-hover:opacity-100 transition-all duration-500 delay-150">
+                  <div className="flex items-center justify-between border-t border-slate-200/50 pt-2 md:pt-4 opacity-0 group-hover:opacity-100 transition-all duration-500 delay-150">
                     <div className="flex flex-col gap-0.5 md:gap-1">
-                      <span className="text-[8px] md:text-[9px] font-black uppercase text-white/40 tracking-tighter">Created At</span>
+                      <span className="text-[8px] md:text-[9px] font-black uppercase text-slate-400 tracking-tighter">Created At</span>
                       <span className="text-[9px] md:text-[10px] font-black">{adjCreated.toLocaleDateString()}</span>
                     </div>
                     <div className="text-right flex flex-col gap-0.5 md:gap-1">
-                      <span className="text-[8px] md:text-[9px] font-black uppercase text-white/40 tracking-tighter">Entries</span>
+                      <span className="text-[8px] md:text-[9px] font-black uppercase text-slate-400 tracking-tighter">Entries</span>
                       <span className="text-[9px] md:text-[10px] font-black">{nb.stats_snapshot?.total_entries || 0}</span>
                     </div>
                   </div>
@@ -83,7 +84,7 @@ export default function NotebooksListView() {
               </div>
               <button
                 onClick={(e) => { e.stopPropagation(); handleDelete(nb.id); }}
-                className="absolute top-3 right-3 md:top-6 md:right-6 p-2 md:p-3 bg-white/10 backdrop-blur-md rounded-xl md:rounded-2xl text-white/40 hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                className="absolute top-3 right-3 md:top-6 md:right-6 z-40 p-2 md:p-3 bg-slate-100/80 backdrop-blur-md rounded-xl md:rounded-2xl text-slate-400 hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
               >
                 <Trash2 size={16} />
               </button>
