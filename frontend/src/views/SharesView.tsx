@@ -4,7 +4,7 @@ import { ChevronLeft, Link2, Trash2, Copy, Check, Clock, FileText, BookOpen, X }
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { shareApi } from '../lib/api'
-import { Card, useToast, useConfirm, journeySpring } from '../components/ui/JourneyUI'
+import { Card, useToast, useConfirm, journeySpring, getBaseUrl } from '../components/ui/JourneyUI'
 
 interface Share {
   id: number
@@ -63,7 +63,7 @@ export default function SharesView() {
   })
 
   const handleCopy = (share: Share) => {
-    const url = `${window.location.origin}/share/${share.token}`
+    const url = `${getBaseUrl()}/share/${share.token}`
     copyToClipboard(url)
     setCopiedId(share.id)
     setTimeout(() => setCopiedId(null), 2000)
