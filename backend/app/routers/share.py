@@ -4,7 +4,7 @@ from datetime import datetime, timezone, timedelta
 from typing import List
 from app.database import get_session
 from app.models import ShareToken, Diary, Notebook, User
-from app.schemas import ShareCreate, ShareRead, SharePublicRead, DiaryRead, NotebookRead
+from app.schemas import ShareCreate, ShareUpdate, ShareRead, SharePublicRead, DiaryRead, NotebookRead
 from app.auth import get_current_user
 
 router = APIRouter(prefix="/api/share", tags=["share"])
@@ -100,6 +100,40 @@ def list_shares(
         .order_by(ShareToken.created_at.desc())
     ).all()
     return [build_share_read(s, session) for s in shares]
+
+
+@router.patch("/{share_id}", response_model=ShareRead)
+def update_share(
+    share_id: int,
+    share_in: ShareUpdate,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """更新分享设置（如过期时间）"""
+    share = session.get(ShareToken, share_id)
+    if not share:
+        raise HTTPException(status_code=404, detail="Share not found")
+    
+    if share.created_by != user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # 更新过期时间
+    if share_in.expires_at is not None:
+        # 确保存储为 UTC 时间
+        expires_at = share_in.expires_at
+        if expires_at.tzinfo is None:
+            # 如果是 naive datetime，假设是 UTC
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        share.expires_at = expires_at
+    else:
+        # None 表示永不过期
+        share.expires_at = None
+    
+    session.add(share)
+    session.commit()
+    session.refresh(share)
+    
+    return build_share_read(share, session)
 
 
 @router.delete("/{share_id}")
