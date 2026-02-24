@@ -115,6 +115,11 @@ export const userApi = {
   updateAI: async (data: any) => (await api.patch('/users/me/ai', data)).data,
   updateGeo: async (data: any) => (await api.patch('/users/me/geo', data)).data,
   createUser: async (data: any) => (await api.post('/users/', data)).data,
+  // Admin user management
+  listAll: async () => (await api.get('/users/')).data,
+  updateRole: async (userId: number, role: string) => (await api.patch(`/users/${userId}/role`, { role })).data,
+  resetPassword: async (userId: number, newPassword: string) => (await api.patch(`/users/${userId}/password`, { new_password: newPassword })).data,
+  deleteUser: async (userId: number) => (await api.delete(`/users/${userId}`)).data,
   exportDb: async () => {
     const res = await api.get('/users/system/export', { responseType: 'blob' })
     const url = window.URL.createObjectURL(new Blob([res.data]))

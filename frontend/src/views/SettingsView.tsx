@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  User, Lock, Database, Cloud, ChevronRight, Download, Upload, LogOut, Globe, Clock, Plus, Minus, UserPlus, Shield, User as UserIcon, Link2, Bookmark, Sparkles, Timer
+  User, Lock, Database, Cloud, ChevronRight, Download, Upload, LogOut, Globe, Clock, Plus, Minus, Link2, Bookmark, Sparkles, Timer
 } from 'lucide-react'
 import { cn, Card, useToast, ConfigSelect } from '../components/ui/JourneyUI'
 import { userApi } from '../lib/api'
@@ -16,7 +16,7 @@ export default function SettingsView() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data: user, isLoading } = useQuery({ queryKey: ['user', 'me'], queryFn: userApi.me })
-  const [activeModal, setActiveModal] = useState<'profile' | 'password' | 'immich' | 'karakeep' | 'ai' | 'geo' | 'system' | 'timezone' | 'timeoffset' | 'createuser' | null>(null)
+  const [activeModal, setActiveModal] = useState<'profile' | 'password' | 'immich' | 'karakeep' | 'ai' | 'geo' | 'system' | 'timezone' | 'timeoffset' | null>(null)
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -48,7 +48,7 @@ export default function SettingsView() {
           <div className="space-y-4">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-indigo-400 ml-2">Administration</h3>
             <Card className="divide-y divide-slate-50 text-slate-900" padding="none">
-              <SettingsRow icon={<UserPlus size={18} className="text-indigo-500" />} label="Provision Account" sub="Add new user or administrator" onClick={() => setActiveModal('createuser')} />
+              <SettingsRow icon={<User size={18} className="text-indigo-500" />} label="User Manager" sub="Manage users and permissions" onClick={() => navigate('/users')} />
               <SettingsRow icon={<Database size={18} className="text-amber-500" />} label="Maintenance" sub="Export/Import DB" onClick={() => setActiveModal('system')} />
             </Card>
           </div>
@@ -87,7 +87,6 @@ export default function SettingsView() {
         {activeModal === 'system' && <SystemModal onClose={() => setActiveModal(null)} />}
         {activeModal === 'timezone' && <TimezoneModal user={user} onClose={() => { setActiveModal(null); queryClient.invalidateQueries(); }} />}
         {activeModal === 'timeoffset' && <TimeOffsetModal user={user} onClose={() => { setActiveModal(null); queryClient.invalidateQueries(); }} />}
-        {activeModal === 'createuser' && <CreateUserModal onClose={() => setActiveModal(null)} />}
       </AnimatePresence>
     </motion.div>
   )
@@ -232,46 +231,6 @@ function KarakeepModal({ user, onClose }: any) {
                 value={form.key} 
                 onChange={e => setForm({ ...form, key: e.target.value })} 
             />
-        </div>
-      </div>
-    </SelectionModal>
-  )
-}
-
-function CreateUserModal({ onClose }: any) {
-  const [form, setForm] = useState({ username: '', password: '', role: 'user' })
-  const addToast = useToast(state => state.add)
-  const mutation = useMutation({
-    mutationFn: userApi.createUser,
-    onSuccess: () => { addToast('success', `Account ${form.username} created`); onClose(); },
-    onError: (e: any) => addToast('error', e.response?.data?.detail || 'Failed')
-  })
-
-  return (
-    <SelectionModal 
-        isOpen={true} onClose={onClose} 
-        title="Provision Account"
-        onConfirm={() => mutation.mutate(form)}
-        confirmLabel="Create"
-        loading={mutation.isPending}
-        className="md:max-w-md md:mx-auto"
-    >
-      <div className="space-y-6">
-        <div className="space-y-4">
-          <Input placeholder="Username" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} />
-          <Input type="password" placeholder="Password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
-        </div>
-
-        <div className="space-y-2">
-          <Typography variant="label" className="ml-2">Assign Role</Typography>
-          <div className="bg-slate-100 p-1.5 rounded-[20px] flex gap-1 shadow-inner">
-            <button onClick={() => setForm({ ...form, role: 'user' })} className={cn("flex-1 py-3 rounded-[14px] text-xs font-black transition-all flex items-center justify-center gap-2", form.role === 'user' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400")}>
-              <UserIcon size={14} /> User
-            </button>
-            <button onClick={() => setForm({ ...form, role: 'admin' })} className={cn("flex-1 py-3 rounded-[14px] text-xs font-black transition-all flex items-center justify-center gap-2", form.role === 'admin' ? "bg-indigo-600 text-white shadow-lg" : "text-slate-400")}>
-              <Shield size={14} /> Admin
-            </button>
-          </div>
         </div>
       </div>
     </SelectionModal>

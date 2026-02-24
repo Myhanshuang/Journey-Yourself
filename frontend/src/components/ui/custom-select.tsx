@@ -14,13 +14,15 @@ export function ConfigSelect({
   options, 
   value, 
   onChange,
-  theme = 'purple'
-}: { 
+  theme = 'purple',
+  placement = "bottom"
+}: {
   label: string
   options: SelectOption[]
   value: string
   onChange: (v: string) => void
   theme?: 'purple' | 'indigo' | 'emerald' | 'pink'
+  placement?: 'top' | 'bottom'
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const selectRef = useRef<HTMLDivElement>(null)
@@ -67,11 +69,19 @@ export function ConfigSelect({
         <AnimatePresence>
           {isOpen && (
             <motion.div
-              initial={{ opacity: 0, y: -8, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.95 }}
-              transition={{ duration: 0.15 }}
-              className="absolute z-50 w-full mt-2 bg-white/95 backdrop-blur-xl rounded-[20px] shadow-2xl border border-white/50 overflow-hidden p-2"
+            // 【修改点 2】: 动画方向适配
+            // 如果向上弹出，初始位置应该是 y: 8 (从下往上飘)
+            initial={{ opacity: 0, y: placement === 'top' ? 8 : -8, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: placement === 'top' ? 8 : -8, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            // 【修改点 3】: 定位类名适配
+            // placement 为 top 时：bottom-full (底部对齐父级顶部) 和 mb-2 (下方留空)
+            // placement 为 bottom 时：top-full (顶部对齐父级底部) 和 mt-2 (上方留空)
+            className={cn(
+              "absolute z-50 w-full bg-white/95 backdrop-blur-xl rounded-[20px] shadow-2xl border border-white/50 overflow-hidden p-2",
+              placement === 'top' ? "bottom-full mb-2" : "top-full mt-2"
+            )}
             >
               {options.map(opt => (
                 <button

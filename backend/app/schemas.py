@@ -24,6 +24,20 @@ class UserUpdate(BaseModel):
     geo_provider: Optional[str] = None
     geo_api_key: Optional[str] = None
 
+class UserAdminRead(BaseModel):
+    """管理员查看用户信息"""
+    id: int
+    username: str
+    role: str
+    timezone: str
+    time_offset_mins: int
+    has_immich_key: bool = False
+    has_karakeep_key: bool = False
+    has_ai_key: bool = False
+    has_geo_key: bool = False
+    ai_provider: Optional[str] = None
+    geo_provider: Optional[str] = None
+
 class UserRead(UserBase):
     id: int
     role: str
