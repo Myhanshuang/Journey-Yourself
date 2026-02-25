@@ -10,8 +10,13 @@ services:
     env_file:
       - .env
     environment:
-      # 也可以在这里覆盖 .env 中的变量
+      # 数据库配置
       - DATABASE_URL=sqlite:///./data/journey.db
+      # MediaCrawler 服务地址 - 从 .env 文件读取
+      # 如需覆盖，取消注释并修改：
+      - MEDIACRAWLER_URL=http://172.17.0.1:8080
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
 volumes:

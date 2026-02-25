@@ -42,6 +42,9 @@ class User(SQLModel, table=True):
     geo_provider: Optional[str] = Field(default="amap") # amap
     geo_api_key: Optional[str] = None
     
+    notion_api_key: Optional[str] = None  # Notion API Key (加密存储)
+    notion_config: Dict[str, Any] = Field(default_factory=lambda: {}, sa_column=Column(JSON))
+    
     # 用户任务配置 (e.g. {"daily_summary": {"enabled": true}})
     task_configs: Dict[str, Any] = Field(default_factory=lambda: {}, sa_column=Column(JSON))
     
@@ -115,3 +118,69 @@ class Task(SQLModel, table=True):
     next_run: Optional[datetime] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class XiaohongshuPost(SQLModel, table=True):
+    """小红书帖子元数据"""
+    __tablename__ = "xiaohongshu_post"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    note_id: str = Field(index=True, unique=True)  # 小红书帖子ID
+    title: str
+    desc: Optional[str] = None
+    note_type: str = Field(default="normal")  # "normal" | "video"
+    video_url: Optional[str] = None  # 视频链接（视频类型时）
+    author_id: str
+    author_name: str
+    author_avatar: Optional[str] = None
+    liked_count: int = Field(default=0)
+    collected_count: int = Field(default=0)
+    comment_count: int = Field(default=0)
+    share_count: int = Field(default=0)
+    ip_location: Optional[str] = None
+    tags: Optional[str] = None  # JSON数组字符串
+    source_url: str
+    created_at: Optional[datetime] = None  # 原帖发布时间
+    fetched_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    
+    # 关联图片
+    images: List["XiaohongshuImage"] = Relationship(back_populates="post")
+
+
+class XiaohongshuImage(SQLModel, table=True):
+    """小红书帖子图片（本地存储）"""
+    __tablename__ = "xiaohongshu_image"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    post_id: int = Field(foreign_key="xiaohongshu_post.id", index=True)
+    image_index: int  # 图片顺序，从0开始
+    local_path: str  # 相对路径: xhs/{note_id}/{index}.jpg
+    original_url: Optional[str] = None
+    
+    post: XiaohongshuPost = Relationship(back_populates="images")
+
+
+class BilibiliVideo(SQLModel, table=True):
+    """B站视频元数据"""
+    __tablename__ = "bilibili_video"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    video_id: str = Field(index=True, unique=True)  # avid (数字ID)
+    bvid: Optional[str] = Field(default=None, index=True)  # BV号
+    title: str
+    desc: Optional[str] = None
+    author_id: str
+    author_name: str
+    author_avatar: Optional[str] = None
+    duration: Optional[int] = None  # 时长（秒）
+    play_count: int = Field(default=0)
+    like_count: int = Field(default=0)
+    coin_count: int = Field(default=0)
+    favorite_count: int = Field(default=0)
+    share_count: int = Field(default=0)
+    danmaku_count: int = Field(default=0)
+    comment_count: int = Field(default=0)
+    cover_local_path: Optional[str] = None  # 相对路径: bilibili/{video_id}/cover.jpg
+    source_url: str
+    created_at: Optional[datetime] = None  # 视频发布时间
+    fetched_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

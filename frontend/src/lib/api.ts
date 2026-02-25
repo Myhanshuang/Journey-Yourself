@@ -106,12 +106,31 @@ export const immichApi = {
     (await api.post('/proxy/immich/import', null, { params: { asset_id: id, mode } })).data
 }
 
+export const notionApi = {
+  search: async (query: string = '', pageSize: number = 20, startCursor?: string) => 
+    (await api.get('/proxy/notion/search', { params: { query, page_size: pageSize, ...(startCursor && { start_cursor: startCursor }) } })).data,
+  getPage: async (pageId: string) => 
+    (await api.get(`/proxy/notion/page/${pageId}`)).data,
+  getBlockChildren: async (blockId: string) => 
+    (await api.get(`/proxy/notion/block/${blockId}/children`)).data
+}
+
+export const crawlerApi = {
+  check: async () => (await api.get('/crawler/check')).data,
+  getStatus: async () => (await api.get('/crawler/status')).data,
+  crawlXhs: async (url: string) => (await api.post('/crawler/xhs', { url })).data,
+  getXhsPost: async (noteId: string) => (await api.get(`/crawler/xhs/${noteId}`)).data,
+  crawlBili: async (url: string) => (await api.post('/crawler/bili', { url })).data,
+  getBiliVideo: async (videoId: string) => (await api.get(`/crawler/bili/${videoId}`)).data
+}
+
 export const userApi = {
   me: async () => (await api.get('/users/me')).data,
   updateProfile: async (data: any) => (await api.patch('/users/me', data)).data,
   updatePassword: async (data: any) => (await api.patch('/users/me/password', data)).data,
   updateImmich: async (data: any) => (await api.patch('/users/me/immich', data)).data,
   updateKarakeep: async (data: any) => (await api.patch('/users/me/karakeep', data)).data,
+  updateNotion: async (data: any) => (await api.patch('/users/me/notion', data)).data,
   updateAI: async (data: any) => (await api.patch('/users/me/ai', data)).data,
   updateGeo: async (data: any) => (await api.patch('/users/me/geo', data)).data,
   createUser: async (data: any) => (await api.post('/users/', data)).data,
@@ -130,7 +149,9 @@ export const userApi = {
   importDb: async (file: File) => {
     const fd = new FormData(); fd.append('file', file)
     return (await api.post('/users/system/import', fd)).data
-  }
+  },
+  getOrphanFiles: async () => (await api.get('/users/system/orphan-files')).data,
+  deleteOrphanFiles: async (paths: string[]) => (await api.delete('/users/system/orphan-files', { data: { paths } })).data
 }
 
 export const shareApi = {

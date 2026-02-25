@@ -24,6 +24,9 @@ import { Video } from '../components/extensions/Video'
 import { Audio } from '../components/extensions/Audio'
 import { Image } from '../components/extensions/Image'
 import { Bookmark } from '../components/extensions/Bookmark'
+import { NotionBlock } from '../components/extensions/NotionBlock'
+import { XhsPost } from '../components/extensions/XhsPost'
+import { BilibiliVideo } from '../components/extensions/BilibiliVideo'
 import { useParams, useNavigate } from 'react-router-dom'
 
 import 'katex/dist/katex.min.css'
@@ -62,6 +65,9 @@ export default function DiaryDetailView() {
       Video,
       Audio,
       Bookmark,
+      NotionBlock,
+      XhsPost,
+      BilibiliVideo,
       Underline,
       Markdown,
       Link.configure({ HTMLAttributes: { class: 'text-[#6ebeea] underline underline-offset-4' } }),

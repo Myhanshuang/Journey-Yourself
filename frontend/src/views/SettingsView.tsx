@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  User, Lock, Database, Cloud, ChevronRight, Download, Upload, LogOut, Globe, Clock, Plus, Minus, Link2, Bookmark, Sparkles, Timer
+  User, Lock, Database, Cloud, ChevronRight, Download, Upload, LogOut, Globe, Clock, Plus, Minus, Link2, Bookmark, Sparkles, Timer, FileText, Trash2
 } from 'lucide-react'
 import { cn, Card, useToast, ConfigSelect } from '../components/ui/JourneyUI'
 import { userApi } from '../lib/api'
@@ -16,7 +16,7 @@ export default function SettingsView() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data: user, isLoading } = useQuery({ queryKey: ['user', 'me'], queryFn: userApi.me })
-  const [activeModal, setActiveModal] = useState<'profile' | 'password' | 'immich' | 'karakeep' | 'ai' | 'geo' | 'system' | 'timezone' | 'timeoffset' | null>(null)
+  const [activeModal, setActiveModal] = useState<'profile' | 'password' | 'immich' | 'karakeep' | 'notion' | 'ai' | 'geo' | 'system' | 'timezone' | 'timeoffset' | 'cleanup' | null>(null)
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -50,6 +50,7 @@ export default function SettingsView() {
             <Card className="divide-y divide-slate-50 text-slate-900" padding="none">
               <SettingsRow icon={<User size={18} className="text-indigo-500" />} label="User Manager" sub="Manage users and permissions" onClick={() => navigate('/users')} />
               <SettingsRow icon={<Database size={18} className="text-amber-500" />} label="Maintenance" sub="Export/Import DB" onClick={() => setActiveModal('system')} />
+              <SettingsRow icon={<Trash2 size={18} className="text-red-500" />} label="Clean Storage" sub="Remove unused files" onClick={() => setActiveModal('cleanup')} />
             </Card>
           </div>
         )}
@@ -59,6 +60,7 @@ export default function SettingsView() {
           <Card className="divide-y divide-slate-50 text-slate-900" padding="none">
             <SettingsRow icon={<Cloud size={18} className={cn(user?.has_immich_key ? "text-emerald-500" : "text-indigo-500")} />} label="Immich Library" sub={user?.has_immich_key ? "Connected" : "Not Configured"} onClick={() => setActiveModal('immich')} />
             <SettingsRow icon={<Bookmark size={18} className={cn(user?.has_karakeep_key ? "text-emerald-500" : "text-pink-500")} />} label="Karakeep Bookmarks" sub={user?.has_karakeep_key ? "Connected" : "Not Configured"} onClick={() => setActiveModal('karakeep')} />
+            <SettingsRow icon={<FileText size={18} className={cn(user?.has_notion_key ? "text-emerald-500" : "text-slate-500")} />} label="Notion Pages" sub={user?.has_notion_key ? "Connected" : "Not Configured"} onClick={() => setActiveModal('notion')} />
             <SettingsRow icon={<Sparkles size={18} className={cn(user?.has_ai_key ? "text-emerald-500" : "text-purple-500")} />} label="AI Assistant" sub={user?.has_ai_key ? "Connected" : "Not Configured"} onClick={() => setActiveModal('ai')} />
             <SettingsRow icon={<Globe size={18} className={cn(user?.has_geo_key ? "text-emerald-500" : "text-indigo-500")} />} label="Geographic Service" sub={user?.has_geo_key ? "Configured" : "Not Configured"} onClick={() => setActiveModal('geo')} />
           </Card>
@@ -86,9 +88,11 @@ export default function SettingsView() {
         {activeModal === 'password' && <PasswordModal onClose={() => setActiveModal(null)} />}
         {activeModal === 'immich' && <ImmichModal user={user} onClose={() => { setActiveModal(null); queryClient.invalidateQueries(); }} />}
         {activeModal === 'karakeep' && <KarakeepModal user={user} onClose={() => { setActiveModal(null); queryClient.invalidateQueries(); }} />}
+        {activeModal === 'notion' && <NotionModal user={user} onClose={() => { setActiveModal(null); queryClient.invalidateQueries(); }} />}
         {activeModal === 'ai' && <AIModal user={user} onClose={() => { setActiveModal(null); queryClient.invalidateQueries(); }} />}
         {activeModal === 'geo' && <GeoModal user={user} onClose={() => { setActiveModal(null); queryClient.invalidateQueries(); }} />}
         {activeModal === 'system' && <SystemModal onClose={() => setActiveModal(null)} />}
+        {activeModal === 'cleanup' && <CleanupModal onClose={() => setActiveModal(null)} />}
         {activeModal === 'timezone' && <TimezoneModal user={user} onClose={() => { setActiveModal(null); queryClient.invalidateQueries(); }} />}
         {activeModal === 'timeoffset' && <TimeOffsetModal user={user} onClose={() => { setActiveModal(null); queryClient.invalidateQueries(); }} />}
       </AnimatePresence>
@@ -459,6 +463,197 @@ function GeoModal({ user, onClose }: any) {
           <Typography variant="label" className="ml-2">API Key (Web Service)</Typography>
           <Input type="password" placeholder="Enter your API Key" value={form.key} onChange={e => setForm({ ...form, key: e.target.value })} />
         </div>
+      </div>
+    </SelectionModal>
+  )
+}
+
+function NotionModal({ user, onClose }: any) {
+  const [key, setKey] = useState('')
+  const addToast = useToast(state => state.add)
+  const mutation = useMutation({
+    mutationFn: userApi.updateNotion,
+    onSuccess: () => { addToast('success', 'Notion Connected'); onClose(); },
+    onError: (err: any) => {
+      const msg = err.response?.data?.detail || 'Verification failed. Check your API Key.'
+      addToast('error', msg)
+    }
+  })
+
+  return (
+    <SelectionModal
+      isOpen={true}
+      onClose={onClose}
+      title="Notion Integration"
+      onConfirm={() => {
+        if (!key) return addToast('error', 'API Key required')
+        mutation.mutate({ api_key: key })
+      }}
+      confirmLabel={mutation.isPending ? 'Verifying...' : 'Connect'}
+      loading={mutation.isPending}
+      className="md:max-w-md md:mx-auto"
+    >
+      <div className="space-y-4">
+        <div className="p-4 bg-slate-50 rounded-2xl text-sm text-slate-600 leading-relaxed">
+          <p className="font-bold mb-2">How to get your Notion API Key:</p>
+          <ol className="list-decimal list-inside space-y-1 text-xs">
+            <li>Go to notion.so/my-integrations</li>
+            <li>Create a new integration</li>
+            <li>Copy the Internal Integration Token</li>
+            <li>Share pages with your integration in Notion</li>
+          </ol>
+        </div>
+        <div className="space-y-2">
+          <Typography variant="label" className="ml-2">Internal Integration Token</Typography>
+          <Input
+            type="password"
+            placeholder="secret_..."
+            value={key}
+            onChange={e => setKey(e.target.value)}
+          />
+        </div>
+      </div>
+    </SelectionModal>
+  )
+}
+
+function CleanupModal({ onClose }: any) {
+  const [files, setFiles] = useState<any[]>([])
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set())
+  const [isLoading, setIsLoading] = useState(true)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const addToast = useToast(state => state.add)
+
+  useEffect(() => {
+    loadOrphanFiles()
+  }, [])
+
+  const loadOrphanFiles = async () => {
+    setIsLoading(true)
+    try {
+      const result = await userApi.getOrphanFiles()
+      setFiles(result.files || [])
+    } catch (error) {
+      addToast('error', 'Failed to load orphan files')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+  }
+
+  const totalSize = files.reduce((sum, f) => sum + f.size, 0)
+  const selectedSize = files.filter(f => selectedFiles.has(f.path)).reduce((sum, f) => sum + f.size, 0)
+
+  const toggleFile = (path: string) => {
+    const newSelected = new Set(selectedFiles)
+    if (newSelected.has(path)) {
+      newSelected.delete(path)
+    } else {
+      newSelected.add(path)
+    }
+    setSelectedFiles(newSelected)
+  }
+
+  const toggleAll = () => {
+    if (selectedFiles.size === files.length) {
+      setSelectedFiles(new Set())
+    } else {
+      setSelectedFiles(new Set(files.map(f => f.path)))
+    }
+  }
+
+  const handleDelete = async () => {
+    if (selectedFiles.size === 0) {
+      addToast('error', 'No files selected')
+      return
+    }
+
+    if (!confirm(`Are you sure you want to delete ${selectedFiles.size} file(s)? This cannot be undone.`)) {
+      return
+    }
+
+    setIsDeleting(true)
+    try {
+      const result = await userApi.deleteOrphanFiles(Array.from(selectedFiles))
+      addToast('success', `Deleted ${result.deleted_count} file(s)`)
+      setFiles(files.filter(f => !result.deleted.includes(f.path)))
+      setSelectedFiles(new Set())
+    } catch (error) {
+      addToast('error', 'Failed to delete files')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  return (
+    <SelectionModal
+      isOpen={true}
+      onClose={onClose}
+      title="Clean Storage"
+      className="md:max-w-lg md:mx-auto"
+    >
+      <div className="space-y-4">
+        <div className="p-4 bg-amber-50 rounded-2xl text-sm text-amber-700">
+          <strong>Warning:</strong> These files are not referenced anywhere. Delete with caution - this cannot be undone.
+        </div>
+
+        {isLoading ? (
+          <div className="text-center py-8 text-slate-400">Scanning...</div>
+        ) : files.length === 0 ? (
+          <div className="text-center py-8 text-slate-400">
+            <Trash2 size={32} className="mx-auto mb-2 opacity-50" />
+            <p>No orphan files found</p>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-500">Found {files.length} file(s), {formatSize(totalSize)}</span>
+              <button onClick={toggleAll} className="text-indigo-500 font-medium">
+                {selectedFiles.size === files.length ? 'Deselect All' : 'Select All'}
+              </button>
+            </div>
+
+            <div className="max-h-60 overflow-y-auto border border-slate-100 rounded-xl divide-y divide-slate-50">
+              {files.map(file => (
+                <label
+                  key={file.path}
+                  className="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedFiles.has(file.path)}
+                    onChange={() => toggleFile(file.path)}
+                    className="w-4 h-4 rounded border-slate-300"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-mono text-slate-600 truncate">{file.path}</p>
+                  </div>
+                  <span className="text-xs text-slate-400">{formatSize(file.size)}</span>
+                </label>
+              ))}
+            </div>
+
+            {selectedFiles.size > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-500">
+                  Selected: {selectedFiles.size} file(s), {formatSize(selectedSize)}
+                </span>
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="px-4 py-2 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 disabled:opacity-50"
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete Selected'}
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </SelectionModal>
   )

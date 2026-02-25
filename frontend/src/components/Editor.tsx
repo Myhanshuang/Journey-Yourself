@@ -17,13 +17,16 @@ import { Video } from './extensions/Video'
 import { Audio } from './extensions/Audio'
 import { Image } from './extensions/Image'
 import { Bookmark } from './extensions/Bookmark'
+import { NotionBlock } from './extensions/NotionBlock'
+import { XhsPost } from './extensions/XhsPost'
+import { BilibiliVideo } from './extensions/BilibiliVideo'
 import { useEffect, useState, useRef, useCallback, useImperativeHandle, forwardRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Bold, Italic, Underline as UnderlineIcon, List, 
   ImageIcon, Save, ArrowLeft, Book,
   Heading1, Heading2, Quote, Code, ListOrdered, MapPin, Smile, Cloud, Tag, Sun,
-  Table as TableIcon, Sigma, ListChecks, Video as VideoIcon, Music, Upload, Bookmark as BookmarkIcon
+  Table as TableIcon, Sigma, ListChecks, Video as VideoIcon, Music, Upload, Bookmark as BookmarkIcon, FileText
 } from 'lucide-react'
 import { cn, useToast, ServiceSetupModal, useIsMobile } from './ui/JourneyUI'
 import { useQuery } from '@tanstack/react-query'
@@ -31,6 +34,9 @@ import MoodPicker from './modals/MoodPicker'
 import LocationModal from './modals/LocationModal'
 import ImmichPicker from './modals/ImmichPicker'
 import KarakeepPicker from './modals/KarakeepPicker'
+import NotionPicker from './modals/NotionPicker'
+import XhsPicker from './modals/XhsPicker'
+import BilibiliPicker from './modals/BilibiliPicker'
 import TagPicker from './modals/TagPicker'
 import WeatherModal from './modals/WeatherModal'
 import NotebookPicker from './modals/NotebookPicker'
@@ -119,8 +125,8 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
     return initialData?.tags || []
   })
   
-  const [activeModal, setActiveModal] = useState<'notebook' | 'mood' | 'location' | 'immich' | 'karakeep' | 'tags' | 'weather' | 'unconfigured' | null>(null)
-  const [unconfiguredType, setUnconfiguredType] = useState<'immich' | 'karakeep' | 'geo' | null>(null)
+  const [activeModal, setActiveModal] = useState<'notebook' | 'mood' | 'location' | 'immich' | 'karakeep' | 'notion' | 'xhs' | 'bilibili' | 'tags' | 'weather' | 'unconfigured' | null>(null)
+  const [unconfiguredType, setUnconfiguredType] = useState<'immich' | 'karakeep' | 'geo' | 'notion' | null>(null)
   const [realWordCount, setRealWordCount] = useState(0)
   const [uploading, setUploading] = useState<'video' | 'audio' | 'image' | null>(null)
   const [, forceUpdate] = useState(0)  // 用于强制更新编辑器状态
@@ -148,6 +154,9 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
       Video,
       Audio,
       Bookmark,
+      NotionBlock,
+      XhsPost,
+      BilibiliVideo,
       Underline, 
       CharacterCount, 
       Markdown,
@@ -325,7 +334,7 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
   if (!editor) return null
   const currentNotebook = notebooks.find((n:any) => n.id === selectedNotebookId) || notebooks[0]
 
-  const handleServiceClick = (type: 'immich' | 'karakeep' | 'geo', modal: any) => {
+  const handleServiceClick = (type: 'immich' | 'karakeep' | 'geo' | 'notion', modal: any) => {
     if (type === 'immich' && !user?.has_immich_key) {
       setUnconfiguredType('immich'); setActiveModal('unconfigured'); return
     }
@@ -334,6 +343,9 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
     }
     if (type === 'geo' && !user?.has_geo_key) {
       setUnconfiguredType('geo'); setActiveModal('unconfigured'); return
+    }
+    if (type === 'notion' && !user?.has_notion_key) {
+      setUnconfiguredType('notion'); setActiveModal('unconfigured'); return
     }
     setActiveModal(modal)
   }
@@ -424,6 +436,9 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
             <HeaderButton icon={<Tag size={14}/>} label={tags.length > 0 ? `${tags.length} Tags` : 'Tags'} onClick={() => setActiveModal('tags')} highlight={tags.length > 0} />
             <HeaderButton icon={<ImageIcon size={14}/>} label="Photos" onClick={() => handleServiceClick('immich', 'immich')} className="bg-[#232f55] text-white hover:bg-[#232f55]/90" />
             <HeaderButton icon={<BookmarkIcon size={14}/>} label="Karakeep" onClick={() => handleServiceClick('karakeep', 'karakeep')} className="bg-pink-500 text-white hover:bg-pink-600" />
+            <HeaderButton icon={<span className="text-sm">📕</span>} label="小红书" onClick={() => setActiveModal('xhs')} className="bg-red-500 text-white hover:bg-red-600" />
+            <HeaderButton icon={<span className="text-sm">📺</span>} label="B站" onClick={() => setActiveModal('bilibili')} className="bg-pink-500 text-white hover:bg-pink-600" />
+            <HeaderButton icon={<FileText size={14}/>} label="Notion" onClick={() => handleServiceClick('notion', 'notion')} className="bg-slate-600 text-white hover:bg-slate-700" />
           </div>
         </div>
 
@@ -558,6 +573,49 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
               setActiveModal(null)
             }}
             onClose={() => setActiveModal(null)} 
+          />
+        )}
+        {activeModal === 'notion' && (
+          <NotionPicker
+            onSelect={(page: any) => {
+              editor.chain().focus().setNotionBlock({
+                pageId: page.id,
+                title: page.title,
+                icon: page.icon,
+                cover: page.cover,
+                url: page.url,
+              }).run()
+              setActiveModal(null)
+            }}
+            onClose={() => setActiveModal(null)}
+          />
+        )}
+        {activeModal === 'xhs' && (
+          <XhsPicker
+            onSelect={(data: any) => {
+              editor.chain().focus().setXhsPost({
+                noteId: data.noteId,
+                title: data.title,
+                images: data.images,
+                noteType: data.noteType,
+                desc: data.desc
+              }).run()
+              setActiveModal(null)
+            }}
+            onClose={() => setActiveModal(null)}
+          />
+        )}
+        {activeModal === 'bilibili' && (
+          <BilibiliPicker
+            onSelect={(data: any) => {
+              editor.chain().focus().setBilibiliVideo({
+                videoId: data.videoId,
+                title: data.title,
+                cover: data.cover
+              }).run()
+              setActiveModal(null)
+            }}
+            onClose={() => setActiveModal(null)}
           />
         )}
       </AnimatePresence>
