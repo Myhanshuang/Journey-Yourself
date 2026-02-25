@@ -1,7 +1,8 @@
 import { NodeViewWrapper } from '@tiptap/react'
 import { useState, useEffect } from 'react'
-import { Play, Eye, ThumbsUp, Coins, Star, ExternalLink } from 'lucide-react'
+import { Play, Eye, ThumbsUp, MessageSquare, ExternalLink } from 'lucide-react'
 import { crawlerApi } from '../../lib/api'
+import { cn } from '../../lib/utils'
 
 interface BilibiliVideoViewProps {
   node: {
@@ -27,15 +28,20 @@ interface VideoData {
     like: number
     coin: number
     favorite: number
+    danmaku: number
   }
   cover?: string
   source_url?: string
 }
 
-// 规范化路径
 const normalizePath = (path: string) => {
   if (!path) return ''
   return path.startsWith('/') ? path : '/' + path
+}
+
+const formatNumber = (num: number) => {
+  if (num >= 10000) return (num / 10000).toFixed(1) + '万'
+  return num.toString()
 }
 
 export default function BilibiliVideoView({ node, selected }: BilibiliVideoViewProps) {
@@ -48,117 +54,117 @@ export default function BilibiliVideoView({ node, selected }: BilibiliVideoViewP
   const displayCover = videoData?.cover || initialCover
 
   useEffect(() => {
-    if (playing && videoId && !videoData) {
+    if (videoId && !videoData) {
       setLoading(true)
       crawlerApi.getBiliVideo(videoId)
         .then(data => setVideoData(data))
         .catch(err => console.error('Failed to load video:', err))
         .finally(() => setLoading(false))
     }
-  }, [playing, videoId, videoData])
+  }, [videoId, videoData])
 
-  // 构建 B 站嵌入播放器 URL
   const embedUrl = videoId?.startsWith('BV') 
     ? `https://player.bilibili.com/player.html?bvid=${videoId}&high_quality=1&autoplay=1`
     : `https://player.bilibili.com/player.html?aid=${videoId}&high_quality=1&autoplay=1`
 
-  const formatNumber = (num: number) => {
-    if (num >= 10000) {
-      return (num / 10000).toFixed(1) + '万'
-    }
-    return num.toString()
-  }
-
-  const handleClick = () => {
-    if (!playing) {
-      setPlaying(true)
-    }
-  }
-
   return (
     <NodeViewWrapper
-      className={`block bg-white rounded-[24px] overflow-hidden shadow-lg border border-slate-100 my-4 hover:shadow-xl transition-shadow ${selected ? 'ring-2 ring-[#6ebeea]' : ''}`}
+      className={cn(
+        "block my-6 rounded-[32px] overflow-hidden bg-white/90 shadow-[0_20px_40px_rgba(35,47,85,0.06)] border border-white/50 transition-all group",
+        selected ? 'ring-4 ring-[#6ebeea]/50' : 'hover:shadow-[0_30px_60px_rgba(35,47,85,0.12)] hover:-translate-y-1'
+      )}
     >
       {playing ? (
-        // 内联播放器
         <div className="relative">
-          <div className="aspect-video bg-black">
-            {loading ? (
-              <div className="w-full h-full flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-pink-500 border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : (
-              <iframe
-                src={embedUrl}
-                className="w-full h-full"
-                allowFullScreen
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              />
-            )}
+          <div className="aspect-video bg-black rounded-t-[32px] overflow-hidden">
+            <iframe
+              src={embedUrl}
+              className="w-full h-full border-none"
+              allowFullScreen
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            />
           </div>
-          {/* 底部信息栏 */}
-          <div className="p-3 flex items-center gap-3 bg-slate-50">
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm text-slate-900 truncate">{displayTitle}</p>
-              {videoData?.stats && (
-                <div className="flex items-center gap-3 mt-1 text-slate-500 text-xs">
-                  <span className="flex items-center gap-1">
-                    <Eye size={12} /> {formatNumber(videoData.stats.play)}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <ThumbsUp size={12} /> {formatNumber(videoData.stats.like)}
-                  </span>
-                </div>
-              )}
+          <div className="p-5 bg-white flex items-center justify-between">
+            <div className="flex-1 min-w-0 pr-4">
+              <h4 className="font-bold text-[#232f55] text-base truncate mb-1">{displayTitle}</h4>
+              <p className="text-xs text-slate-500 truncate">{videoData?.desc || '正在播放'}</p>
             </div>
             <a
               href={`https://www.bilibili.com/video/${videoId}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 hover:bg-slate-100 rounded-xl transition-colors flex-shrink-0"
+              className="w-10 h-10 rounded-[14px] bg-[#f2f4f2] flex items-center justify-center text-[#232f55]/60 hover:bg-[#6ebeea] hover:text-white transition-all flex-shrink-0"
               onClick={e => e.stopPropagation()}
             >
-              <ExternalLink size={16} className="text-slate-400" />
+              <ExternalLink size={18} />
             </a>
           </div>
         </div>
       ) : (
-        // 封面和播放按钮
         <div 
-          className={`cursor-pointer ${selected ? 'ring-2 ring-[#6ebeea] rounded-[24px]' : ''}`}
-          onClick={handleClick}
+          className="cursor-pointer relative flex flex-col"
+          onClick={() => setPlaying(true)}
         >
-          {displayCover ? (
-            <div className="relative">
+          <div className="relative aspect-video overflow-hidden">
+            {displayCover ? (
               <img
                 src={normalizePath(displayCover)}
                 alt={displayTitle}
-                className="block w-full aspect-video object-cover"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors">
-                <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
-                  <Play size={28} className="text-pink-500 ml-1" fill="currentColor" />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-pink-100 to-rose-50" />
+            )}
+            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+            
+            <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5">
+              <span className="text-[10px] font-black uppercase tracking-wider text-white">Bilibili</span>
+            </div>
+
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-[20px] bg-white/95 backdrop-blur-sm flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+                {loading ? (
+                  <div className="w-8 h-8 border-2 border-[#fb7299] border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Play size={28} className="text-[#fb7299] ml-1" fill="currentColor" />
+                )}
+              </div>
+            </div>
+
+            {videoData?.stats && (
+              <div className="absolute bottom-3 left-3 right-3 flex justify-between items-end">
+                <div className="flex gap-2">
+                  <div className="bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-[10px] flex items-center gap-1.5 text-white text-xs font-medium">
+                    <Eye size={12} /> {formatNumber(videoData.stats.play)}
+                  </div>
+                  <div className="bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-[10px] flex items-center gap-1.5 text-white text-xs font-medium">
+                    <MessageSquare size={12} /> {formatNumber(videoData.stats.danmaku)}
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="aspect-video bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center">
-              <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
-                <Play size={28} className="text-pink-500 ml-1" fill="currentColor" />
+            )}
+          </div>
+          
+          <div className="p-5 flex gap-4 items-start">
+            {videoData?.author?.avatar ? (
+              <img src={videoData.author.avatar} alt="" className="w-10 h-10 rounded-full border-2 border-white shadow-sm flex-shrink-0 object-cover" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-[#fb7299]/10 flex items-center justify-center flex-shrink-0 text-[#fb7299] font-bold text-sm">
+                B
+              </div>
+            )}
+            <div className="flex-1 min-w-0 pt-0.5">
+              <h4 className="font-bold text-[#232f55] text-base leading-snug line-clamp-2 mb-1.5">{displayTitle}</h4>
+              <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+                <span className="truncate">{videoData?.author?.name || 'B站UP主'}</span>
+                {videoData?.stats && (
+                  <>
+                    <span className="w-1 h-1 rounded-full bg-slate-300" />
+                    <span className="flex items-center gap-1 text-[#fb7299]"><ThumbsUp size={12} /> {formatNumber(videoData.stats.like)}</span>
+                  </>
+                )}
               </div>
             </div>
-          )}
-          <div className="p-4 flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center flex-shrink-0">
-              <span className="text-xl">📺</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-[#232f55] text-sm truncate">{displayTitle}</p>
-              <p className="text-xs text-slate-400 mt-1">点击播放视频</p>
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-wider text-pink-500 bg-pink-50 px-2 py-1 rounded-md">
-              BILIBILI
-            </span>
           </div>
         </div>
       )}
