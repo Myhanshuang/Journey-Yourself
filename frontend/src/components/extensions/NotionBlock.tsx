@@ -1,5 +1,7 @@
 import { Node, mergeAttributes } from '@tiptap/core'
+import { ReactNodeViewRenderer } from '@tiptap/react'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
+import NotionBlockView from './NotionBlockView'
 
 export interface NotionBlockOptions {
   HTMLAttributes: Record<string, string>
@@ -220,6 +222,10 @@ export const NotionBlock = Node.create<NotionBlockOptions>({
           })
         },
     }
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(NotionBlockView)
   },
 
   addProseMirrorPlugins() {
