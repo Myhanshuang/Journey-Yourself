@@ -97,9 +97,9 @@ export default function XhsPostView({ node, selected }: XhsPostViewProps) {
 
   return (
     <>
-      <NodeViewWrapper
+    <NodeViewWrapper
         className={cn(
-          "block my-6 rounded-[32px] overflow-hidden bg-white/90 shadow-[0_20px_40px_rgba(35,47,85,0.06)] border border-white/50 transition-all group cursor-pointer",
+          "block my-3 rounded-[32px] overflow-hidden bg-white/90 shadow-[0_20px_40px_rgba(35,47,85,0.06)] border border-white/50 transition-all group cursor-pointer",
           selected ? 'ring-4 ring-[#6ebeea]/50' : 'hover:shadow-[0_30px_60px_rgba(35,47,85,0.12)] hover:-translate-y-1'
         )}
         onClick={handleClick}
@@ -304,8 +304,35 @@ export default function XhsPostView({ node, selected }: XhsPostViewProps) {
                           // XHS parent_comment_id is string '0' or number 0 or empty for top-level
                           const rootComments = allComments.filter(c => !c.parent_comment_id || c.parent_comment_id === '0' || c.parent_comment_id === 0)
                           
+                          const commentMap = new Map();
+                          allComments.forEach(c => commentMap.set(c.comment_id, c));
+                          
+                          const getRootId = (commentId: string) => {
+                            let current = commentMap.get(commentId);
+                            let rootId = current?.comment_id;
+                            let seen = new Set();
+                            while(current && current.parent_comment_id && current.parent_comment_id !== '0' && current.parent_comment_id !== 0) {
+                              if (seen.has(current.comment_id)) break;
+                              seen.add(current.comment_id);
+                              current = commentMap.get(current.parent_comment_id);
+                              if (current) {
+                                rootId = current.comment_id;
+                              } else {
+                                break;
+                              }
+                            }
+                            return rootId;
+                          };
+
+                          const rootGroups: Record<string, any[]> = {};
+                          allComments.forEach(c => {
+                            const rId = getRootId(c.comment_id) || c.comment_id;
+                            if (!rootGroups[rId]) rootGroups[rId] = [];
+                            if (rId !== c.comment_id) rootGroups[rId].push(c);
+                          });
+                          
                           return rootComments.slice(0, 20).map((comment: any, idx: number) => {
-                            const subComments = allComments.filter(c => c.parent_comment_id === comment.comment_id)
+                            const subComments = rootGroups[comment.comment_id] || []
                             
                             return (
                               <div key={idx} className="flex gap-3">

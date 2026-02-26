@@ -75,15 +75,33 @@ export const BilibiliVideo = Node.create<BilibiliVideoOptions>({
 
     const children = []
 
+    const badge = [
+      'div',
+      { class: 'absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 z-10' },
+      ['span', { class: 'text-[10px] font-black uppercase tracking-wider text-white' }, 'Bilibili'],
+    ]
+
     // Cover image
     if (cover) {
       children.push([
-        'img',
-        {
-          src: '/' + cover,
-          alt: title,
-          class: 'block w-full !max-w-full aspect-video object-cover !m-0 rounded-none',
-        },
+        'div',
+        { class: 'relative aspect-video overflow-hidden' },
+        badge,
+        [
+          'img',
+          {
+            src: '/' + cover,
+            alt: title,
+            class: 'block w-full h-full object-cover !m-0 rounded-none',
+          },
+        ]
+      ])
+    } else {
+      children.push([
+        'div',
+        { class: 'relative aspect-video bg-gradient-to-br from-pink-100 to-rose-50 flex items-center justify-center overflow-hidden' },
+        badge,
+        ['span', { class: 'text-4xl opacity-50' }, '📺'],
       ])
     }
 
@@ -91,11 +109,6 @@ export const BilibiliVideo = Node.create<BilibiliVideoOptions>({
     children.push([
       'div',
       { class: 'p-4 flex items-center gap-4' },
-      [
-        'div',
-        { class: 'w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center flex-shrink-0' },
-        ['span', { class: 'text-xl' }, '📺'],
-      ],
       [
         'div',
         { class: 'flex-1 min-w-0' },
@@ -110,18 +123,13 @@ export const BilibiliVideo = Node.create<BilibiliVideoOptions>({
           '点击播放视频',
         ],
       ],
-      [
-        'span',
-        { class: 'text-[10px] font-black uppercase tracking-wider text-pink-500 bg-pink-50 px-2 py-1 rounded-md' },
-        'BILIBILI',
-      ],
     ])
 
     return [
       'div',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
         'data-type': 'bilibili-video',
-        class: 'block bg-white rounded-[24px] overflow-hidden shadow-lg border border-slate-100 my-4 hover:shadow-xl transition-shadow cursor-pointer',
+        class: 'block bg-white rounded-[24px] overflow-hidden shadow-lg border border-slate-100 my-3 hover:shadow-xl transition-shadow cursor-pointer',
       }),
       ...children,
     ]

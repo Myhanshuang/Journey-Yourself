@@ -96,11 +96,18 @@ export const XhsPost = Node.create<XhsPostOptions>({
 
     const children = []
 
+    const badge = [
+      'div',
+      { class: 'absolute top-4 right-4 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 z-10' },
+      ['span', { class: 'text-[10px] font-black uppercase tracking-wider text-white' }, '小红书'],
+    ]
+
     // Cover image (first image) or video placeholder
     if (isVideo) {
       children.push([
         'div',
-        { class: 'relative aspect-video bg-gradient-to-br from-red-100 to-pink-100 flex items-center justify-center' },
+        { class: 'relative aspect-video bg-gradient-to-br from-red-100 to-pink-100 flex items-center justify-center overflow-hidden' },
+        badge,
         [
           'div',
           { class: 'w-16 h-16 rounded-full bg-white/90 flex items-center justify-center' },
@@ -123,12 +130,24 @@ export const XhsPost = Node.create<XhsPostOptions>({
       ])
     } else if (images.length > 0) {
       children.push([
-        'img',
-        {
-          src: '/' + images[0],
-          alt: title,
-          class: 'block w-full !max-w-full aspect-video object-cover !m-0 rounded-none',
-        },
+        'div',
+        { class: 'relative aspect-video overflow-hidden' },
+        badge,
+        [
+          'img',
+          {
+            src: '/' + images[0],
+            alt: title,
+            class: 'block w-full h-full object-cover !m-0 rounded-none',
+          },
+        ]
+      ])
+    } else {
+      children.push([
+        'div',
+        { class: 'relative aspect-video bg-gradient-to-br from-red-50 to-rose-50 flex items-center justify-center overflow-hidden' },
+        badge,
+        ['span', { class: 'text-4xl opacity-50' }, '📕'],
       ])
     }
 
@@ -136,11 +155,6 @@ export const XhsPost = Node.create<XhsPostOptions>({
     children.push([
       'div',
       { class: 'p-4 flex items-center gap-4' },
-      [
-        'div',
-        { class: 'w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0' },
-        ['span', { class: 'text-xl' }, '📕'],
-      ],
       [
         'div',
         { class: 'flex-1 min-w-0' },
@@ -155,18 +169,13 @@ export const XhsPost = Node.create<XhsPostOptions>({
           isVideo ? '点击播放视频' : images.length > 0 ? `${images.length} 张图片` : '点击查看帖子内容',
         ],
       ],
-      [
-        'span',
-        { class: 'text-[10px] font-black uppercase tracking-wider text-red-500 bg-red-50 px-2 py-1 rounded-md' },
-        '小红书',
-      ],
     ])
 
     return [
       'div',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
         'data-type': 'xhs-post',
-        class: 'block bg-white rounded-[24px] overflow-hidden shadow-lg border border-slate-100 my-4 hover:shadow-xl transition-shadow cursor-pointer',
+        class: 'block bg-white rounded-[24px] overflow-hidden shadow-lg border border-slate-100 my-3 hover:shadow-xl transition-shadow cursor-pointer',
       }),
       ...children,
     ]
