@@ -6,6 +6,7 @@ import uuid
 import os
 import hashlib
 import hmac
+import time
 from app.auth import get_current_user
 from app.models import User
 from app.security import decrypt_data
@@ -27,18 +28,40 @@ def generate_asset_signature(asset_id: str, user_id: int = 1) -> str:
     ).hexdigest()[:32]
 
 
-def verify_asset_signature(asset_id: str, sig: str, session: Session) -> tuple[bool, User | None]:
-    """验证资源签名，遍历数据库中所有用户进行验证
-    
-    返回: (是否有效, 用户对象)
-    """
-    # 查询所有用户
-    users = session.exec(select(User)).all()
-    for user in users:
-        expected = generate_asset_signature(asset_id, user.id)
+_sig_cache = {}  # type: dict[tuple[str, str], int]
+_user_immich_config_cache = {}  # type: dict[int, tuple[dict | None, str | None, float]]
+
+def verify_asset_signature(asset_id: str, sig: str, session: Session) -> tuple[bool, int | None]:
+    """验证资源签名，返回是否有效和用户ID"""
+    cache_key = (asset_id, sig)
+    if cache_key in _sig_cache:
+        return True, _sig_cache[cache_key]
+        
+    user_ids = session.exec(select(User.id)).all()
+    for uid in user_ids:
+        expected = generate_asset_signature(asset_id, uid)
         if hmac.compare_digest(expected, sig):
-            return True, user
+            if len(_sig_cache) > 10000:
+                _sig_cache.clear()
+            _sig_cache[cache_key] = uid
+            return True, uid
     return False, None
+
+def get_immich_proxy_config(user_id: int, session: Session) -> tuple[dict | None, str | None]:
+    """获取并缓存 Immich 的代理配置 (headers, base_url)"""
+    now = time.time()
+    if user_id in _user_immich_config_cache:
+        headers, base_url, expire_time = _user_immich_config_cache[user_id]
+        if now < expire_time:
+            return headers, base_url
+            
+    user = session.get(User, user_id)
+    if user:
+        headers = get_immich_headers(user)
+        base_url = get_immich_base_url(user)
+        _user_immich_config_cache[user_id] = (headers, base_url, now + 300)
+        return headers, base_url
+    return None, None
 
 
 def get_immich_headers(user: User) -> dict:
@@ -128,13 +151,13 @@ async def proxy_asset(
 ):
     """代理缩略图 - 支持签名验证，无需 Authorization header"""
     # 通过签名验证获取用户
-    valid, user = verify_asset_signature(asset_id, sig, session)
-    if not valid or not user:
+    valid, user_id = verify_asset_signature(asset_id, sig, session)
+    if not valid or not user_id:
         raise HTTPException(403, "Invalid signature")
     
-    headers = get_immich_headers(user)
-    if not headers: raise HTTPException(404, "Immich not configured")
-    base_url = get_immich_base_url(user)
+    headers, base_url = get_immich_proxy_config(user_id, session)
+    if not headers or not base_url:
+        raise HTTPException(404, "Immich not configured")
     
     async def generate():
         async with httpx.AsyncClient(base_url=base_url, headers=headers, verify=False, timeout=60.0) as client:
@@ -175,13 +198,13 @@ async def proxy_original(
     session: Session = Depends(get_session)
 ):
     """代理原始图片 - 支持签名验证，无需 Authorization header"""
-    valid, user = verify_asset_signature(asset_id, sig, session)
-    if not valid or not user:
+    valid, user_id = verify_asset_signature(asset_id, sig, session)
+    if not valid or not user_id:
         raise HTTPException(403, "Invalid signature")
     
-    headers = get_immich_headers(user)
-    if not headers: raise HTTPException(404, "Immich not configured")
-    base_url = get_immich_base_url(user)
+    headers, base_url = get_immich_proxy_config(user_id, session)
+    if not headers or not base_url:
+        raise HTTPException(404, "Immich not configured")
     
     async def generate():
         async with httpx.AsyncClient(base_url=base_url, headers=headers, verify=False, timeout=300.0) as client:
@@ -199,13 +222,13 @@ async def proxy_video(
     session: Session = Depends(get_session)
 ):
     """代理视频播放流 - 支持签名验证，无需 Authorization header"""
-    valid, user = verify_asset_signature(asset_id, sig, session)
-    if not valid or not user:
+    valid, user_id = verify_asset_signature(asset_id, sig, session)
+    if not valid or not user_id:
         raise HTTPException(403, "Invalid signature")
     
-    headers = get_immich_headers(user)
-    if not headers: raise HTTPException(404, "Immich not configured")
-    base_url = get_immich_base_url(user)
+    headers, base_url = get_immich_proxy_config(user_id, session)
+    if not headers or not base_url:
+        raise HTTPException(404, "Immich not configured")
     
     async def generate():
         async with httpx.AsyncClient(base_url=base_url, headers=headers, verify=False, timeout=300.0) as client:

@@ -434,11 +434,11 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
             
             <HeaderButton icon={<MapPin size={14}/>} label={location ? location.name : 'Place'} onClick={() => handleServiceClick('geo', 'location')} highlight={!!location} />
             <HeaderButton icon={<Tag size={14}/>} label={tags.length > 0 ? `${tags.length} Tags` : 'Tags'} onClick={() => setActiveModal('tags')} highlight={tags.length > 0} />
-            <HeaderButton icon={<ImageIcon size={14}/>} label="Photos" onClick={() => handleServiceClick('immich', 'immich')} className="bg-[#232f55] text-white hover:bg-[#232f55]/90" />
-            <HeaderButton icon={<BookmarkIcon size={14}/>} label="Karakeep" onClick={() => handleServiceClick('karakeep', 'karakeep')} className="bg-pink-500 text-white hover:bg-pink-600" />
-            <HeaderButton icon={<span className="text-sm">📕</span>} label="小红书" onClick={() => setActiveModal('xhs')} className="bg-red-500 text-white hover:bg-red-600" />
-            <HeaderButton icon={<span className="text-sm">📺</span>} label="B站" onClick={() => setActiveModal('bilibili')} className="bg-pink-500 text-white hover:bg-pink-600" />
-            <HeaderButton icon={<FileText size={14}/>} label="Notion" onClick={() => handleServiceClick('notion', 'notion')} className="bg-slate-600 text-white hover:bg-slate-700" />
+            <HeaderButton icon={<ImageIcon size={14} className="text-[#6ebeea]"/>} label="Photos" onClick={() => handleServiceClick('immich', 'immich')} />
+            <HeaderButton icon={<BookmarkIcon size={14} className="text-pink-500"/>} label="Karakeep" onClick={() => handleServiceClick('karakeep', 'karakeep')} />
+            <HeaderButton icon={<span className="text-sm">📕</span>} label="小红书" onClick={() => setActiveModal('xhs')} />
+            <HeaderButton icon={<span className="text-sm">📺</span>} label="B站" onClick={() => setActiveModal('bilibili')} />
+            <HeaderButton icon={<FileText size={14} className="text-slate-600"/>} label="Notion" onClick={() => handleServiceClick('notion', 'notion')} />
           </div>
         </div>
 

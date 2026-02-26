@@ -19,11 +19,13 @@ router = APIRouter(prefix="/api/crawler", tags=["crawler"])
 class XhsCrawlRequest(BaseModel):
     """小红书抓取请求"""
     url: str  # 小红书帖子URL
+    enable_comments: bool = False
 
 
 class BiliCrawlRequest(BaseModel):
     """B站抓取请求"""
     url: str  # B站视频URL
+    enable_comments: bool = False
 
 
 class CrawlResponse(BaseModel):
@@ -41,8 +43,8 @@ def parse_xhs_url(url: str) -> Optional[tuple]:
     Returns:
         (note_id, xsec_token) 或 None（如果 URL 无效）
     """
-    # 匹配格式：https://www.xiaohongshu.com/explore/{note_id}
-    pattern = r"xiaohongshu\.com/explore/([a-f0-9]+)"
+    # 匹配格式：https://www.xiaohongshu.com/explore/{note_id} 或 https://www.xiaohongshu.com/discovery/item/{note_id}
+    pattern = r"xiaohongshu\.com/(?:explore|discovery/item)/([a-f0-9]+)"
     match = re.search(pattern, url)
     if not match:
         return None
@@ -76,13 +78,13 @@ def parse_bili_url(url: str) -> Optional[str]:
     return None
 
 
-async def crawl_xhs_task(note_id: str, user_id: int, xsec_token: Optional[str] = None, original_url: Optional[str] = None):
+async def crawl_xhs_task(note_id: str, user_id: int, xsec_token: Optional[str] = None, original_url: Optional[str] = None, enable_comments: bool = False):
     """后台任务：抓取小红书帖子"""
     from app.database import engine
     from sqlmodel import Session as SessionLocal
     
     # 启动爬虫 - 传递完整 URL 或 note_id
-    result = await crawler_service.start_xhs_crawl(note_id, xsec_token, original_url)
+    result = await crawler_service.start_xhs_crawl(note_id, xsec_token, original_url, enable_comments=enable_comments)
     if not result.get("success"):
         return {"status": "failed", "message": result.get("error")}
     
@@ -121,7 +123,7 @@ async def crawl_xhs_task(note_id: str, user_id: int, xsec_token: Optional[str] =
         return {"status": "completed", "data": result}
 
 
-async def crawl_bili_task(video_id: str, user_id: int):
+async def crawl_bili_task(video_id: str, user_id: int, enable_comments: bool = False):
     """后台任务：抓取B站视频"""
     from app.database import engine
     from sqlmodel import Session as SessionLocal
@@ -153,7 +155,7 @@ async def crawl_bili_task(video_id: str, user_id: int):
             }
     
     # 启动爬虫
-    result = await crawler_service.start_bili_crawl(video_id)
+    result = await crawler_service.start_bili_crawl(video_id, enable_comments=enable_comments)
     if not result.get("success"):
         return {"status": "failed", "message": result.get("error")}
     
@@ -240,9 +242,29 @@ async def crawl_xiaohongshu(
     抓取小红书帖子
     
     同步执行抓取，等待完成后返回结果
-    注意：URL 必须包含 xsec_token 参数
+    支持解析小红书移动端分享短链接 (xhslink.com) 自动获取 xsec_token
     """
-    parsed = parse_xhs_url(request.url)
+    url = request.url
+    
+    # 尝试解析分享短链接或无 xsec_token 的链接，获取重定向后的完整链接
+    if "xhslink.com" in url or ("xiaohongshu.com" in url and "xsec_token" not in url):
+        import httpx
+        try:
+            # 提取文本中的链接
+            match = re.search(r"https?://[^\s]+", url)
+            if match:
+                fetch_url = match.group(0)
+                async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
+                    headers = {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                    }
+                    resp = await client.get(fetch_url, headers=headers)
+                    url = str(resp.url)
+                    print(f"Resolved XHS share link: {url}")
+        except Exception as e:
+            print(f"Failed to resolve share link: {e}")
+
+    parsed = parse_xhs_url(url)
     
     if not parsed:
         raise HTTPException(status_code=400, detail="无效的小红书链接")
@@ -253,11 +275,15 @@ async def crawl_xiaohongshu(
     if not xsec_token:
         raise HTTPException(
             status_code=400, 
-            detail="链接缺少 xsec_token 参数，请从浏览器地址栏复制完整链接"
+            detail="无法获取 xsec_token 参数，请尝试从浏览器地址栏复制完整链接"
         )
+        
+    # 构建干净的 URL，只保留 explore/xxx?xsec_token=xxx 供爬虫使用
+    clean_url = f"https://www.xiaohongshu.com/explore/{note_id}?xsec_token={xsec_token}&xsec_source=pc_search"
+    print(f"Cleaned XHS URL for crawler: {clean_url}")
     
     # 同步执行抓取
-    result = await crawl_xhs_task(note_id, current_user.id, xsec_token, request.url)
+    result = await crawl_xhs_task(note_id, current_user.id, xsec_token, clean_url, enable_comments=request.enable_comments)
     
     return CrawlResponse(
         success=result.get("status") == "completed",
@@ -284,7 +310,7 @@ async def crawl_bilibili(
         raise HTTPException(status_code=400, detail="无效的B站链接")
     
     # 同步执行抓取
-    result = await crawl_bili_task(video_id, current_user.id)
+    result = await crawl_bili_task(video_id, current_user.id, enable_comments=request.enable_comments)
     
     return CrawlResponse(
         success=result.get("status") == "completed",
@@ -332,6 +358,7 @@ async def get_xhs_post(
         "ip_location": post.ip_location,
         "tags": post.tags.split(",") if post.tags else [],
         "source_url": post.source_url,
+        "comments": post.comments or [],
         "images": [
             {
                 "index": img.image_index,
@@ -379,6 +406,7 @@ async def get_bili_video(
         },
         "cover": f"/{video.cover_local_path}" if video.cover_local_path else None,
         "source_url": video.source_url,
+        "comments": video.comments or [],
         "created_at": video.created_at.isoformat() if video.created_at else None,
         "fetched_at": video.fetched_at.isoformat()
     }

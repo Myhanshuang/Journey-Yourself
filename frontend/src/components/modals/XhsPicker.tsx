@@ -21,6 +21,7 @@ interface XhsPickerProps {
 export default function XhsPicker({ onSelect, onClose }: XhsPickerProps) {
   const [url, setUrl] = useState('')
   const [isCrawling, setIsCrawling] = useState(false)
+  const [enableComments, setEnableComments] = useState(false)
   const addToast = useToast(state => state.add)
 
   const handleCrawl = async () => {
@@ -32,7 +33,7 @@ export default function XhsPicker({ onSelect, onClose }: XhsPickerProps) {
     setIsCrawling(true)
 
     try {
-      const result = await crawlerApi.crawlXhs(url.trim())
+      const result = await crawlerApi.crawlXhs(url.trim(), enableComments)
       
       if (result.success && result.data?.note_id) {
         addToast('success', '帖子抓取成功')
@@ -103,6 +104,17 @@ export default function XhsPicker({ onSelect, onClose }: XhsPickerProps) {
             />
           </div>
 
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input 
+              type="checkbox" 
+              checked={enableComments} 
+              onChange={e => setEnableComments(e.target.checked)}
+              disabled={isCrawling}
+              className="w-4 h-4 rounded text-red-500 focus:ring-red-500"
+            />
+            <span className="text-sm font-medium text-slate-600">同时抓取评论 (需要较长时间)</span>
+          </label>
+
           <button
             onClick={handleCrawl}
             disabled={isCrawling || !url.trim()}
@@ -130,10 +142,10 @@ export default function XhsPicker({ onSelect, onClose }: XhsPickerProps) {
         <div className="px-6 pb-6">
           <div className="bg-slate-50 rounded-2xl p-4 space-y-2">
             <p className="text-xs text-slate-500 leading-relaxed">
-              <strong>重要：</strong>请从浏览器地址栏复制<strong>完整链接</strong>，必须包含 xsec_token 参数。
+              <strong>提示：</strong>支持直接粘贴小红书 APP 的<strong>分享链接</strong>或浏览器地址栏的完整链接。
             </p>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              示例：.../explore/xxx?<span className="text-red-500 font-medium">xsec_token=ABC...</span>
+            <p className="text-xs text-slate-400 leading-relaxed truncate">
+              示例：http://xhslink.com/xxx 或 .../explore/xxx
             </p>
           </div>
         </div>

@@ -38,6 +38,7 @@ interface PostData {
   ip_location?: string
   source_url?: string
   tags?: string[]
+  comments?: any[]
 }
 
 const normalizePath = (path: string) => {
@@ -293,6 +294,73 @@ export default function XhsPostView({ node, selected }: XhsPostViewProps) {
                   <div className="text-xs text-slate-400 font-medium">
                     {postData?.created_at ? new Date(postData.created_at).toLocaleDateString() : '最近更新'}
                   </div>
+
+                  {postData?.comments && postData.comments.length > 0 && (
+                    <div className="pt-4 border-t border-slate-100">
+                      <h4 className="font-bold text-sm text-[#232f55] mb-4">精选评论 ({postData.comments.length})</h4>
+                      <div className="space-y-4">
+                        {(() => {
+                          const allComments = postData.comments || []
+                          // XHS parent_comment_id is string '0' or number 0 or empty for top-level
+                          const rootComments = allComments.filter(c => !c.parent_comment_id || c.parent_comment_id === '0' || c.parent_comment_id === 0)
+                          
+                          return rootComments.slice(0, 20).map((comment: any, idx: number) => {
+                            const subComments = allComments.filter(c => c.parent_comment_id === comment.comment_id)
+                            
+                            return (
+                              <div key={idx} className="flex gap-3">
+                                {comment.avatar ? (
+                                  <img src={comment.avatar} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full bg-slate-100 flex-shrink-0" />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-bold text-slate-700">{comment.nickname}</p>
+                                  <p className="text-sm text-slate-600 mt-1 leading-relaxed whitespace-pre-wrap">
+                                    {comment.content}
+                                  </p>
+                                  <div className="flex items-center gap-4 mt-1.5 text-[10px] text-slate-400">
+                                    <span>{comment.create_time ? new Date(comment.create_time * (comment.create_time > 1e11 ? 1 : 1000)).toLocaleDateString() : ''}</span>
+                                    {Number(comment.like_count) > 0 && (
+                                      <span className="flex items-center gap-1">
+                                        <Heart size={10} /> {formatNumber(Number(comment.like_count))}
+                                      </span>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Sub-comments */}
+                                  {subComments.length > 0 && (
+                                    <div className="mt-3 bg-slate-50 rounded-xl p-3 space-y-3">
+                                      {subComments.slice(0, 3).map((sub: any, subIdx: number) => (
+                                        <div key={subIdx} className="flex gap-2">
+                                          {sub.avatar ? (
+                                            <img src={sub.avatar} alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
+                                          ) : (
+                                            <div className="w-5 h-5 rounded-full bg-slate-200 flex-shrink-0" />
+                                          )}
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-[11px] font-bold text-slate-700">{sub.nickname}</p>
+                                            <p className="text-xs text-slate-600 mt-0.5 leading-relaxed whitespace-pre-wrap">
+                                              {sub.content}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      ))}
+                                      {subComments.length > 3 && (
+                                        <button className="text-[11px] font-bold text-[#6ebeea]">
+                                          查看全部 {subComments.length} 条回复
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })
+                        })()}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Sticky Footer Stats */}

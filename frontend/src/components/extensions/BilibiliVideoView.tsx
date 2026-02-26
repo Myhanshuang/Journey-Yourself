@@ -32,6 +32,7 @@ interface VideoData {
   }
   cover?: string
   source_url?: string
+  comments?: any[]
 }
 
 const normalizePath = (path: string) => {
@@ -99,6 +100,75 @@ export default function BilibiliVideoView({ node, selected }: BilibiliVideoViewP
               <ExternalLink size={18} />
             </a>
           </div>
+
+          {videoData?.comments && videoData.comments.length > 0 && (
+            <div className="bg-slate-50 border-t border-slate-100 max-h-64 overflow-y-auto p-4 custom-scrollbar">
+              <h4 className="font-bold text-xs text-slate-500 mb-3 uppercase tracking-wider">精选评论 ({videoData.comments.length})</h4>
+              <div className="space-y-4">
+                {(() => {
+                  const allComments = videoData.comments || []
+                  // Bili parent_comment_id is often "0" or 0 for root comments
+                  const rootComments = allComments.filter(c => !c.parent_comment_id || c.parent_comment_id === '0' || c.parent_comment_id === 0)
+                  
+                  return rootComments.slice(0, 15).map((comment: any, idx: number) => {
+                    const subComments = allComments.filter(c => c.parent_comment_id === comment.comment_id)
+                    
+                    return (
+                      <div key={idx} className="flex gap-3">
+                        {comment.avatar ? (
+                          <img src={comment.avatar} alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0 border border-slate-200" />
+                        ) : (
+                          <div className="w-6 h-6 rounded-full bg-slate-200 flex-shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0 pt-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-700">{comment.nickname}</span>
+                            <span className="text-[10px] text-slate-400">
+                              {comment.create_time ? new Date(comment.create_time * (comment.create_time > 1e11 ? 1 : 1000)).toLocaleDateString() : ''}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 mt-1 leading-relaxed whitespace-pre-wrap">
+                            {comment.content}
+                          </p>
+                          {Number(comment.like_count) > 0 && (
+                            <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-400">
+                              <ThumbsUp size={10} /> {formatNumber(Number(comment.like_count))}
+                            </div>
+                          )}
+                          
+                          {/* Sub-comments */}
+                          {subComments.length > 0 && (
+                            <div className="mt-2 bg-slate-100/50 rounded-lg p-2.5 space-y-2.5 border border-slate-100">
+                              {subComments.slice(0, 3).map((sub: any, subIdx: number) => (
+                                <div key={subIdx} className="flex gap-2">
+                                  {sub.avatar ? (
+                                    <img src={sub.avatar} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+                                  ) : (
+                                    <div className="w-4 h-4 rounded-full bg-slate-200 flex-shrink-0" />
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-[10px] font-bold text-slate-700">{sub.nickname}</p>
+                                    <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed whitespace-pre-wrap">
+                                      {sub.content}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                              {subComments.length > 3 && (
+                                <button className="text-[10px] font-bold text-[#6ebeea]">
+                                  查看全部 {subComments.length} 条回复
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })
+                })()}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div 

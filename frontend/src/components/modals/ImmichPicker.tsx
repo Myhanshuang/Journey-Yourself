@@ -127,7 +127,7 @@ export default function ImmichPicker({ onSelect, onClose }: ImmichPickerProps) {
               variant="ghost"
               size="sm"
               onClick={() => setImportMode('link')} 
-              className={cn("h-8 rounded-[12px] text-[10px]", importMode === 'link' ? "bg-white/20 text-white hover:bg-white/20 hover:text-white" : "text-slate-500 hover:text-slate-300 hover:bg-transparent")}
+              className={cn("h-8 rounded-[12px] text-[10px]", importMode === 'link' ? "bg-white/20 text-white hover:bg-white/20 hover:text-white" : "text-slate-400 hover:text-slate-300 hover:bg-transparent")}
             >
               Link
             </Button>
@@ -135,7 +135,7 @@ export default function ImmichPicker({ onSelect, onClose }: ImmichPickerProps) {
               variant="ghost"
               size="sm"
               onClick={() => setImportMode('copy')} 
-              className={cn("h-8 rounded-[12px] text-[10px]", importMode === 'copy' ? "bg-white/20 text-white hover:bg-white/20 hover:text-white" : "text-slate-500 hover:text-slate-300 hover:bg-transparent")}
+              className={cn("h-8 rounded-[12px] text-[10px]", importMode === 'copy' ? "bg-white/20 text-white hover:bg-white/20 hover:text-white" : "text-slate-400 hover:text-slate-300 hover:bg-transparent")}
             >
               Copy
             </Button>

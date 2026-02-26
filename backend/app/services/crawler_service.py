@@ -128,7 +128,7 @@ class CrawlerService:
         except Exception as e:
             return {"status": "error", "error": str(e)}
     
-    async def start_xhs_crawl(self, note_id: str, xsec_token: str = None, original_url: str = None) -> Dict[str, Any]:
+    async def start_xhs_crawl(self, note_id: str, xsec_token: str = None, original_url: str = None, enable_comments: bool = False) -> Dict[str, Any]:
         """
         启动小红书帖子抓取任务
         
@@ -136,6 +136,7 @@ class CrawlerService:
             note_id: 小红书帖子ID
             xsec_token: 小红书 xsec_token（必需）
             original_url: 完整的帖子 URL
+            enable_comments: 是否抓取评论
         
         Returns:
             启动结果
@@ -165,7 +166,7 @@ class CrawlerService:
             "login_type": "qrcode",
             "crawler_type": "detail",
             "specified_ids": specified_url,  # 传递完整 URL
-            "enable_comments": False,
+            "enable_comments": enable_comments,
             "save_option": "json",
             "headless": True
         }
@@ -193,12 +194,13 @@ class CrawlerService:
         except Exception as e:
             return {"success": False, "error": str(e)}
     
-    async def start_bili_crawl(self, video_id: str) -> Dict[str, Any]:
+    async def start_bili_crawl(self, video_id: str, enable_comments: bool = False) -> Dict[str, Any]:
         """
         启动B站视频抓取任务
         
         Args:
             video_id: B站视频ID (BV号)
+            enable_comments: 是否抓取评论
         
         Returns:
             启动结果
@@ -216,7 +218,7 @@ class CrawlerService:
             "login_type": "qrcode",
             "crawler_type": "detail",
             "specified_ids": video_id,
-            "enable_comments": False,
+            "enable_comments": enable_comments,
             "save_option": "json",
             "headless": True
         }
@@ -321,13 +323,23 @@ class CrawlerService:
         
         数据文件格式: {"data": [...], "total": n}
         文件名是日期格式，需要在 data 数组中搜索 note_id
-        优先搜索 detail_contents 文件（帖子内容），排除评论文件
         """
         files = await self.get_data_files("xhs")
         # 按修改时间倒序，优先查找最新的文件
         files = sorted(files, key=lambda x: x.get("modified_at", 0), reverse=True)
         
-        # 优先搜索帖子内容文件，排除评论文件
+        # 获取评论数据
+        comments = []
+        comment_files = [f for f in files if "detail_comments" in f.get("name", "")]
+        for f in comment_files:
+            content = await self.get_file_content(f["path"])
+            if content and isinstance(content, dict):
+                data_list = content.get("data", [])
+                for item in data_list:
+                    if item.get("note_id") == note_id:
+                        comments.append(item)
+        
+        # 优先搜索帖子内容文件
         content_files = [f for f in files if "detail_contents" in f.get("name", "")]
         other_files = [f for f in files if "detail_contents" not in f.get("name", "") and "comment" not in f.get("name", "")]
         
@@ -337,6 +349,8 @@ class CrawlerService:
                 data_list = content.get("data", [])
                 for item in data_list:
                     if item.get("note_id") == note_id and "title" in item:
+                        if comments:
+                            item["_comments"] = comments
                         return [item]
         return None
     
@@ -382,9 +396,20 @@ class CrawlerService:
         # 按修改时间倒序，优先查找最新的文件
         files = sorted(files, key=lambda x: x.get("modified_at", 0), reverse=True)
         
+        # 获取评论数据
+        comments = []
+        comment_files = [f for f in files if "detail_comments" in f.get("name", "")]
+        for f in comment_files:
+            content = await self.get_file_content(f["path"])
+            if content and isinstance(content, dict):
+                data_list = content.get("data", [])
+                for item in data_list:
+                    if item.get("video_id") == search_id:
+                        comments.append(item)
+        
         # 优先搜索 detail_contents 文件
         content_files = [f for f in files if "detail_contents" in f.get("name", "")]
-        other_files = [f for f in files if "detail_contents" not in f.get("name", "")]
+        other_files = [f for f in files if "detail_contents" not in f.get("name", "") and "comment" not in f.get("name", "")]
         
         for f in content_files + other_files:
             content = await self.get_file_content(f["path"])
@@ -393,6 +418,8 @@ class CrawlerService:
                 for item in data_list:
                     # 匹配 video_id (avid)
                     if item.get("video_id") == search_id:
+                        if comments:
+                            item["_comments"] = comments
                         return [item]
         return None
     
@@ -451,7 +478,8 @@ class CrawlerService:
             ip_location=post_data.get("ip_location", ""),
             tags=post_data.get("tag_list", ""),
             source_url=post_data.get("note_url", ""),
-            created_at=datetime.fromtimestamp(post_data.get("time", 0) / 1000, tz=timezone.utc) if post_data.get("time") else None
+            created_at=datetime.fromtimestamp(post_data.get("time", 0) / 1000, tz=timezone.utc) if post_data.get("time") else None,
+            comments=post_data.get("_comments")
         )
         session.add(post)
         session.commit()
@@ -546,7 +574,8 @@ class CrawlerService:
             danmaku_count=int(video_data.get("video_danmaku", 0) or 0),
             comment_count=int(video_data.get("video_comment", 0) or 0),
             source_url=video_data.get("video_url", ""),
-            created_at=datetime.fromtimestamp(video_data.get("create_time", 0), tz=timezone.utc) if video_data.get("create_time") else None
+            created_at=datetime.fromtimestamp(video_data.get("create_time", 0), tz=timezone.utc) if video_data.get("create_time") else None,
+            comments=video_data.get("_comments")
         )
         
         # 下载封面

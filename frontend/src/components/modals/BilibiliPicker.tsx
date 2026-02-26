@@ -19,6 +19,7 @@ interface BilibiliPickerProps {
 export default function BilibiliPicker({ onSelect, onClose }: BilibiliPickerProps) {
   const [url, setUrl] = useState('')
   const [isCrawling, setIsCrawling] = useState(false)
+  const [enableComments, setEnableComments] = useState(false)
   const addToast = useToast(state => state.add)
 
   const handleCrawl = async () => {
@@ -30,7 +31,7 @@ export default function BilibiliPicker({ onSelect, onClose }: BilibiliPickerProp
     setIsCrawling(true)
 
     try {
-      const result = await crawlerApi.crawlBili(url.trim())
+      const result = await crawlerApi.crawlBili(url.trim(), enableComments)
       
       if (result.success && result.data?.video_id) {
         addToast('success', '视频信息抓取成功')
@@ -98,6 +99,17 @@ export default function BilibiliPicker({ onSelect, onClose }: BilibiliPickerProp
               disabled={isCrawling}
             />
           </div>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input 
+              type="checkbox" 
+              checked={enableComments} 
+              onChange={e => setEnableComments(e.target.checked)}
+              disabled={isCrawling}
+              className="w-4 h-4 rounded text-pink-500 focus:ring-pink-500"
+            />
+            <span className="text-sm font-medium text-slate-600">同时抓取评论 (需要较长时间)</span>
+          </label>
 
           <button
             onClick={handleCrawl}

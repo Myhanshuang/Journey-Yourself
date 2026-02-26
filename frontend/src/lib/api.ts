@@ -118,9 +118,9 @@ export const notionApi = {
 export const crawlerApi = {
   check: async () => (await api.get('/crawler/check')).data,
   getStatus: async () => (await api.get('/crawler/status')).data,
-  crawlXhs: async (url: string) => (await api.post('/crawler/xhs', { url })).data,
+  crawlXhs: async (url: string, enable_comments: boolean = false) => (await api.post('/crawler/xhs', { url, enable_comments })).data,
   getXhsPost: async (noteId: string) => (await api.get(`/crawler/xhs/${noteId}`)).data,
-  crawlBili: async (url: string) => (await api.post('/crawler/bili', { url })).data,
+  crawlBili: async (url: string, enable_comments: boolean = false) => (await api.post('/crawler/bili', { url, enable_comments })).data,
   getBiliVideo: async (videoId: string) => (await api.get(`/crawler/bili/${videoId}`)).data
 }
 

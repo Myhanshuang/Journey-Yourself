@@ -142,6 +142,7 @@ class XiaohongshuPost(SQLModel, table=True):
     source_url: str
     created_at: Optional[datetime] = None  # 原帖发布时间
     fetched_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    comments: Optional[List[Dict[str, Any]]] = Field(default=None, sa_column=Column(JSON))
     
     # 关联图片
     images: List["XiaohongshuImage"] = Relationship(back_populates="post")
@@ -184,3 +185,4 @@ class BilibiliVideo(SQLModel, table=True):
     source_url: str
     created_at: Optional[datetime] = None  # 视频发布时间
     fetched_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    comments: Optional[List[Dict[str, Any]]] = Field(default=None, sa_column=Column(JSON))
