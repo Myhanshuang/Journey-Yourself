@@ -2,6 +2,7 @@ Here list the project limitations.
 
 - heif / heic not support.
 - live photo not support.
+- xhs crawler cannot show the comment of comment
 
 Future features:
 
