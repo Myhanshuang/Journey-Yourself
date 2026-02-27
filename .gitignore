@@ -1,6 +1,7 @@
 test
 sideproduct
 MediaCrawler
+data
 # 构建输出
 frontend/dist/
 frontend/node_modules/
