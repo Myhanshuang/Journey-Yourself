@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     
     # 数据库路径 (默认指向容器内的持久化目录)
     DATABASE_URL: str = "sqlite:///./data/journey.db"
+    
+    # MediaCrawler 服务地址
+    # Docker 环境下需要使用宿主机 IP，如 http://host.docker.internal:8080 或 http://192.168.x.x:8080
+    MEDIACRAWLER_URL: str = "http://localhost:8080"
 
     # Pydantic V2 推荐配置方式：
     # 1. 优先读取系统环境变量 (Docker / OS env)

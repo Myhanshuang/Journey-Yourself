@@ -4,7 +4,7 @@ from fastapi.responses import FileResponse
 from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import create_db_and_tables
-from app.routers import auth, notebooks, diaries, proxy, assets, amap, users, timeline, stats, tags, share, karakeep, tasks, search
+from app.routers import auth, notebooks, diaries, proxy, assets, amap, users, timeline, stats, tags, share, karakeep, tasks, search, notion, media_crawler
 from app.scheduler import start_scheduler, shutdown_scheduler
 from app.config import settings
 import os
@@ -43,10 +43,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def add_cache_control_header(request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith(("/uploads", "/xhs", "/bilibili", "/assets")):
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    return response
+
 if not os.path.exists("data/uploads"):
     os.makedirs("data/uploads")
 
+if not os.path.exists("data/xhs"):
+    os.makedirs("data/xhs")
+
+if not os.path.exists("data/bilibili"):
+    os.makedirs("data/bilibili")
+
 app.mount("/uploads", StaticFiles(directory="data/uploads"), name="uploads")
+app.mount("/xhs", StaticFiles(directory="data/xhs"), name="xhs")
+app.mount("/bilibili", StaticFiles(directory="data/bilibili"), name="bilibili")
 
 # 确保备份目录存在
 os.makedirs(BACKUP_DIR, exist_ok=True)
@@ -106,6 +121,8 @@ app.include_router(share.router)
 app.include_router(karakeep.router)
 app.include_router(tasks.router)
 app.include_router(search.router)
+app.include_router(notion.router)
+app.include_router(media_crawler.router)
 
 # --- 生产环境静态文件托管 ---
 # 双重检查：先检查相对路径（Docker），再检查绝对路径（本地开发）

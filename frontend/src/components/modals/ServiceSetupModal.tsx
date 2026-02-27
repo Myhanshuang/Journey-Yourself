@@ -1,10 +1,10 @@
-import { Image as ImageIcon, MapPin, Bookmark } from 'lucide-react'
+import { Image as ImageIcon, MapPin, Bookmark, FileText } from 'lucide-react'
 import { Modal } from '../ui/modal'
 import { Button } from '../ui/button'
 import { Typography } from '../ui/typography'
 
 interface ServiceSetupModalProps {
-  type: 'immich' | 'geo' | 'karakeep'
+  type: 'immich' | 'geo' | 'karakeep' | 'notion'
   onClose: () => void
   isOpen?: boolean
 }
@@ -25,6 +25,11 @@ export default function ServiceSetupModal({ type, onClose, isOpen = true }: Serv
       icon: <Bookmark size={40} />,
       title: "Karakeep Required",
       desc: "Connect your Karakeep account in Settings to access your bookmarks directly.",
+    },
+    notion: {
+      icon: <FileText size={40} />,
+      title: "Notion Required",
+      desc: "Connect your Notion integration in Settings to embed Notion pages directly.",
     }
   }[type]
 

@@ -44,6 +44,9 @@ class GeoUpdate(BaseModel):
     provider: str # amap
     api_key: str
 
+class NotionUpdate(BaseModel):
+    api_key: str
+
 @router.post("/", response_model=dict)
 async def create_user_admin(user_in: UserCreate, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
     if current_user.role != UserRole.ADMIN: 
@@ -171,6 +174,7 @@ async def read_user_me(current_user: User = Depends(get_current_user)):
         "has_immich_key": bool(current_user.immich_api_key),
         "karakeep_url": current_user.karakeep_url,
         "has_karakeep_key": bool(current_user.karakeep_api_key),
+        "has_notion_key": bool(current_user.notion_api_key),
         "ai_provider": current_user.ai_provider or "openai",
         "ai_base_url": current_user.ai_base_url,
         "ai_model": current_user.ai_model,
@@ -335,6 +339,45 @@ async def update_geo(geo_in: GeoUpdate, current_user: User = Depends(get_current
     else:
         raise HTTPException(status_code=400, detail="Unsupported provider")
 
+@router.patch("/me/notion")
+async def update_notion(notion_in: NotionUpdate, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    api_key = notion_in.api_key.strip()
+    print(f"DEBUG: Verifying Notion API key for {current_user.username}")
+    
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Notion-Version": "2022-06-28",
+        "Content-Type": "application/json"
+    }
+    
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            # 验证 API key 通过搜索用户可访问的页面
+            resp = await client.post(
+                "https://api.notion.com/v1/search",
+                headers=headers,
+                json={"page_size": 1}
+            )
+            
+            if resp.status_code == 200:
+                print(f"DEBUG: Notion verification successful for {current_user.username}")
+                current_user.notion_api_key = encrypt_data(api_key)
+                session.add(current_user)
+                session.commit()
+                return {"status": "ok"}
+            
+            if resp.status_code == 401:
+                raise HTTPException(status_code=400, detail="Invalid Notion API key")
+            
+            print(f"DEBUG: Notion failed with status {resp.status_code}: {resp.text}")
+            raise HTTPException(status_code=400, detail=f"Notion API error: {resp.status_code}")
+        except httpx.RequestError as e:
+            print(f"DEBUG: Notion connection error: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"Notion connection failed: {str(e)}")
+        except Exception as e:
+            print(f"DEBUG: Unexpected error during Notion verification: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/system/export")
 async def export_db(current_user: User = Depends(get_current_user)):
     if current_user.role != UserRole.ADMIN: raise HTTPException(403)
@@ -393,3 +436,214 @@ def cleanup_old_backups(prefix: str, max_count: int = 3):
     )
     for old_backup in backups[max_count:]:
         os.remove(os.path.join(backup_dir, old_backup))
+
+
+# 孤立文件清理功能
+
+# 排除模式 - 不参与清理的URL模式
+EXCLUDE_URL_PATTERNS = [
+    # Immich 外链
+    r'/api/proxy/immich/',
+    # Karakeep 书签图片
+    r'^https?://(?!localhost|127\.0\.0\.1)',
+    # Notion 图片
+    r'/api/proxy/notion/',
+    r'^https?://.*\.notion\.site',
+    # 默认封面
+    r'picsum\.photos',
+    r'placeholder',
+]
+
+def is_excluded_url(url: str) -> bool:
+    """检查URL是否匹配排除模式"""
+    import re
+    for pattern in EXCLUDE_URL_PATTERNS:
+        if re.search(pattern, url):
+            return True
+    return False
+
+
+def extract_local_paths_from_content(content: dict) -> set:
+    """从日记内容中提取本地文件路径"""
+    paths = set()
+    
+    def extract_from_node(node: dict):
+        if not isinstance(node, dict):
+            return
+        
+        # 提取图片、视频、音频的 src
+        if node.get('type') in ['image', 'video', 'audio']:
+            src = node.get('attrs', {}).get('src', '')
+            if src and src.startswith('/uploads/'):
+                paths.add(src)
+        
+        # 递归处理子节点
+        content_list = node.get('content', [])
+        if isinstance(content_list, list):
+            for child in content_list:
+                extract_from_node(child)
+    
+    if isinstance(content, dict):
+        extract_from_node(content)
+    
+    return paths
+
+
+@router.get("/system/orphan-files")
+async def get_orphan_files(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """扫描孤立文件（未被任何地方引用的本地文件）"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(403, "Admin only")
+    
+    data_dir = os.path.dirname(sqlite_file_path)
+    uploads_dir = os.path.join(data_dir, "uploads")
+    xhs_dir = os.path.join(data_dir, "xhs")
+    bilibili_dir = os.path.join(data_dir, "bilibili")
+    
+    # 1. 收集所有本地文件
+    all_local_files = {}  # {相对路径: (绝对路径, 文件大小)}
+    
+    # uploads 目录
+    if os.path.exists(uploads_dir):
+        for root, _, files in os.walk(uploads_dir):
+            for f in files:
+                abs_path = os.path.join(root, f)
+                rel_path = os.path.relpath(abs_path, data_dir)
+                # 转换为URL格式
+                url_path = '/' + rel_path.replace(os.sep, '/')
+                all_local_files[url_path] = (abs_path, os.path.getsize(abs_path))
+    
+    # xhs 目录
+    if os.path.exists(xhs_dir):
+        for root, _, files in os.walk(xhs_dir):
+            for f in files:
+                abs_path = os.path.join(root, f)
+                rel_path = os.path.relpath(abs_path, data_dir)
+                url_path = '/' + rel_path.replace(os.sep, '/')
+                all_local_files[url_path] = (abs_path, os.path.getsize(abs_path))
+    
+    # bilibili 目录
+    if os.path.exists(bilibili_dir):
+        for root, _, files in os.walk(bilibili_dir):
+            for f in files:
+                abs_path = os.path.join(root, f)
+                rel_path = os.path.relpath(abs_path, data_dir)
+                url_path = '/' + rel_path.replace(os.sep, '/')
+                all_local_files[url_path] = (abs_path, os.path.getsize(abs_path))
+    
+    # 2. 收集被引用的本地路径
+    referenced_paths = set()
+    
+    # 从 Notebook.cover_url 收集
+    notebooks = session.exec(select(Notebook)).all()
+    for nb in notebooks:
+        if nb.cover_url and not is_excluded_url(nb.cover_url):
+            if nb.cover_url.startswith('/uploads/'):
+                referenced_paths.add(nb.cover_url)
+    
+    # 从 Diary.content 收集
+    diaries = session.exec(select(Diary)).all()
+    for diary in diaries:
+        if diary.content:
+            paths = extract_local_paths_from_content(diary.content)
+            referenced_paths.update(paths)
+    
+    # 从 XiaohongshuImage 表收集
+    from app.models import XiaohongshuImage
+    try:
+        xhs_images = session.exec(select(XiaohongshuImage)).all()
+        for img in xhs_images:
+            if img.local_path:
+                # 转换为URL格式
+                url_path = '/' + img.local_path.replace(os.sep, '/')
+                referenced_paths.add(url_path)
+    except Exception:
+        pass  # 表可能不存在
+    
+    # 从 BilibiliVideo 表收集
+    from app.models import BilibiliVideo
+    try:
+        bili_videos = session.exec(select(BilibiliVideo)).all()
+        for video in bili_videos:
+            if video.cover_local_path:
+                url_path = '/' + video.cover_local_path.replace(os.sep, '/')
+                referenced_paths.add(url_path)
+    except Exception:
+        pass  # 表可能不存在
+    
+    # 3. 计算孤立文件
+    orphan_files = []
+    total_size = 0
+    
+    for url_path, (abs_path, size) in all_local_files.items():
+        if url_path not in referenced_paths:
+            orphan_files.append({
+                "path": url_path,
+                "size": size,
+                "modified": os.path.getmtime(abs_path)
+            })
+            total_size += size
+    
+    # 按修改时间排序
+    orphan_files.sort(key=lambda x: x["modified"], reverse=True)
+    
+    return {
+        "files": orphan_files,
+        "total_count": len(orphan_files),
+        "total_size_bytes": total_size,
+        "warning": "请仔细确认后再删除，删除后无法恢复"
+    }
+
+
+class OrphanFilesDelete(BaseModel):
+    paths: List[str]
+
+
+@router.delete("/system/orphan-files")
+async def delete_orphan_files(
+    data: OrphanFilesDelete,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """删除指定的孤立文件"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(403, "Admin only")
+    
+    data_dir = os.path.dirname(sqlite_file_path)
+    deleted = []
+    failed = []
+    
+    for path in data.paths:
+        # 安全检查：只能删除 uploads/xhs/bilibili 下的文件
+        if not any(path.startswith(f'/{d}/') for d in ['uploads', 'xhs', 'bilibili']):
+            failed.append({"path": path, "reason": "Invalid path"})
+            continue
+        
+        # 构建绝对路径
+        abs_path = os.path.join(data_dir, path.lstrip('/'))
+        
+        # 安全检查：防止路径遍历
+        if not os.path.abspath(abs_path).startswith(os.path.abspath(data_dir)):
+            failed.append({"path": path, "reason": "Path traversal detected"})
+            continue
+        
+        # 检查文件是否存在
+        if not os.path.exists(abs_path):
+            failed.append({"path": path, "reason": "File not found"})
+            continue
+        
+        try:
+            os.remove(abs_path)
+            deleted.append(path)
+        except Exception as e:
+            failed.append({"path": path, "reason": str(e)})
+    
+    return {
+        "deleted": deleted,
+        "failed": failed,
+        "deleted_count": len(deleted),
+        "failed_count": len(failed)
+    }
