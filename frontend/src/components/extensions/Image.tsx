@@ -1,6 +1,9 @@
 import { Image as TiptapImage } from '@tiptap/extension-image'
 import { mergeAttributes } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
+import { ReactNodeViewRenderer } from '@tiptap/react'
+import ImageView from './ImageView'
+import { getAssetUrl } from '../../lib/utils'
 
 export const Image = TiptapImage.extend({
   name: 'image',
@@ -21,17 +24,15 @@ export const Image = TiptapImage.extend({
   },
 
   renderHTML({ HTMLAttributes }) {
-    let src = HTMLAttributes.src
-    if (src && src.startsWith('/')) {
-      const serverUrl = localStorage.getItem('server_url')
-      if (serverUrl) {
-         src = `${serverUrl.replace(/\/$/, '')}${src}`
-      }
-    }
+    let src = getAssetUrl(HTMLAttributes.src) || HTMLAttributes.src
     return [
       'img',
       mergeAttributes(this.options.HTMLAttributes, { ...HTMLAttributes, src }),
     ]
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(ImageView)
   },
 
   addProseMirrorPlugins() {

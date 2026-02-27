@@ -2,7 +2,7 @@ import { NodeViewWrapper } from '@tiptap/react'
 import { useState, useEffect } from 'react'
 import { Play, Eye, ThumbsUp, MessageSquare, ExternalLink } from 'lucide-react'
 import { crawlerApi } from '../../lib/api'
-import { cn } from '../../lib/utils'
+import { cn, getAssetUrl } from '../../lib/utils'
 
 interface BilibiliVideoViewProps {
   node: {
@@ -33,11 +33,6 @@ interface VideoData {
   cover?: string
   source_url?: string
   comments?: any[]
-}
-
-const normalizePath = (path: string) => {
-  if (!path) return ''
-  return path.startsWith('/') ? path : '/' + path
 }
 
 const formatNumber = (num: number) => {
@@ -205,7 +200,7 @@ export default function BilibiliVideoView({ node, selected }: BilibiliVideoViewP
           <div className="relative aspect-video overflow-hidden">
             {displayCover ? (
               <img
-                src={normalizePath(displayCover)}
+                src={getAssetUrl(displayCover)}
                 alt={displayTitle}
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
