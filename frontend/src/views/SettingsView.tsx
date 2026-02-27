@@ -79,7 +79,7 @@ export default function SettingsView() {
         </button>
 
         <div className="text-center text-xs text-slate-300 font-medium pt-8">
-          v0.1.0
+          v0.2.0
         </div>
       </div>
 
