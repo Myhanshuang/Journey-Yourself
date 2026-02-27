@@ -1,6 +1,7 @@
 test
 sideproduct
-
+MediaCrawler
+data
 # 构建输出
 frontend/dist/
 frontend/node_modules/
@@ -20,3 +21,4 @@ __pycache__/
 .vscode/
 *.DS_Store
 *.log
+
