@@ -78,15 +78,15 @@ h1, h2, h3, h4, h5, h6 {
   @apply max-w-none;
 }
 
-.prose h1 {
+.prose > h1 {
   @apply text-5xl font-black tracking-tighter mb-10 mt-16;
 }
 
-.prose h2 {
+.prose > h2 {
   @apply text-3xl font-black tracking-tight mb-8 mt-12;
 }
 
-.prose p {
+.prose > p {
   @apply leading-[1.8] mb-6 text-slate-700;
 }
 
@@ -114,7 +114,7 @@ h1, h2, h3, h4, h5, h6 {
   @apply bg-transparent p-0 text-inherit border-none text-sm;
 }
 
-.prose img {
+.prose > img, .prose > p > img {
   @apply rounded-[40px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] my-16 border border-white/50 mx-auto;
 }
 
@@ -248,20 +248,20 @@ body.mobile-app {
 }
 
 /* Typography scaling for mobile */
-body.mobile-app .prose h1 {
+body.mobile-app .prose > h1 {
   font-size: 2rem;
   line-height: 1.1;
   margin-top: 1.5rem;
   margin-bottom: 1rem;
 }
 
-body.mobile-app .prose h2 {
+body.mobile-app .prose > h2 {
   font-size: 1.5rem;
   margin-top: 1.2rem;
   margin-bottom: 0.8rem;
 }
 
-body.mobile-app .prose p {
+body.mobile-app .prose > p {
   margin-bottom: 1rem;
   line-height: 1.6;
 }
