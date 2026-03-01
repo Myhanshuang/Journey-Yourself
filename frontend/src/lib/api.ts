@@ -67,12 +67,14 @@ export const notebookApi = {
 
 export const diaryApi = {
   recent: async (limit?: number, offset?: number) => (await api.get('/diaries/recent', { params: { limit, offset } })).data,
+  pinned: async () => (await api.get('/diaries/pinned')).data,
   lastYearToday: async () => (await api.get('/diaries/last-year-today')).data,
   get: async (id: number) => (await api.get(`/diaries/${id}`)).data,
   listByNotebook: async (id: number, limit?: number, offset?: number) => (await api.get(`/diaries/notebook/${id}`, { params: { limit, offset } })).data,
   create: async (d: any) => (await api.post('/diaries/', d)).data,
   update: async (id: number, d: any) => (await api.put(`/diaries/${id}`, d)).data,
-  delete: async (id: number) => (await api.delete(`/diaries/${id}`)).data
+  delete: async (id: number) => (await api.delete(`/diaries/${id}`)).data,
+  togglePin: async (id: number) => (await api.post(`/diaries/${id}/toggle-pin`)).data
 }
 
 export const timelineApi = {

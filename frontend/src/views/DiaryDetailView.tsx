@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import {
-  ChevronLeft, Edit3, Clock, RotateCw, Trash2, Tag,
+  ChevronLeft, Edit3, Clock, RotateCw, Trash2, Tag, Pin, PinOff,
   MapPin, Sun, Cloud, CloudRain, Wind, Snowflake, CloudLightning, Link2, Copy, Check, X
 } from 'lucide-react'
 import { useAdjustedTime, useConfirm, useToast, journeySpring, useIsMobile, cn, ActionMenu, getBaseUrl } from '../components/ui/JourneyUI'
@@ -53,6 +53,21 @@ export default function DiaryDetailView() {
     queryFn: () => diaryApi.get(Number(id)),
     enabled: !!id,
   })
+
+  const pinMutation = useMutation({
+    mutationFn: () => diaryApi.togglePin(Number(id)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['diary', Number(id)] })
+      queryClient.invalidateQueries({ queryKey: ['diaries', 'pinned'] })
+      queryClient.invalidateQueries({ queryKey: ['diaries', 'recent'] })
+      addToast('success', diary?.is_pinned ? 'Unpinned from top' : 'Pinned to top')
+    },
+    onError: () => addToast('error', 'Failed to toggle pin')
+  })
+
+  const handleTogglePin = () => {
+    pinMutation.mutate()
+  }
 
   const editor = useEditor({
     editable: false,
@@ -171,6 +186,7 @@ export default function DiaryDetailView() {
   const WIcon = diary.weather_snapshot ? (WEATHER_ICONS[diary.weather_snapshot.weather] || Cloud) : null
 
   const actions = [
+    { label: diary?.is_pinned ? 'Unpin' : 'Pin', icon: diary?.is_pinned ? <PinOff size={18} /> : <Pin size={18} />, onClick: handleTogglePin },
     { label: 'Share', icon: <Link2 size={18} />, onClick: handleShare },
     { label: 'Edit', icon: <Edit3 size={18} />, onClick: handleEdit },
     { label: 'Delete', icon: <Trash2 size={18} />, onClick: handleDelete, variant: 'danger' as const },
@@ -215,7 +231,10 @@ export default function DiaryDetailView() {
           )}
         </div>
 
-        <h1 className={cn("font-black tracking-tighter text-[#232f55] mb-8 leading-[1.1]", isMobile ? "text-4xl" : "text-6xl")}>{diary.title}</h1>
+        <div className="flex items-start gap-4 mb-8">
+          <h1 className={cn("font-black tracking-tighter text-[#232f55] leading-[1.1] flex-1", isMobile ? "text-4xl" : "text-6xl")}>{diary.title}</h1>
+          {diary.is_pinned && <Pin size={isMobile ? 24 : 32} className="text-[#6ebeea] mt-2 shrink-0 fill-[#6ebeea]/10" />}
+        </div>
 
         {diary.tags && diary.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-8">

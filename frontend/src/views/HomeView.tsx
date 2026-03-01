@@ -17,6 +17,7 @@ export default function HomeView() {
   const { getAdjusted } = useAdjustedTime()
 
   const { data: user } = useQuery({ queryKey: ['user', 'me'], queryFn: userApi.me })
+  const { data: pinned = [] } = useQuery({ queryKey: ['diaries', 'pinned'], queryFn: diaryApi.pinned })
   const { data: recent = [] } = useQuery({ queryKey: ['diaries', 'recent'], queryFn: () => diaryApi.recent() })
   const { data: lastYear = [] } = useQuery({ queryKey: ['diaries', 'lastYear'], queryFn: diaryApi.lastYearToday })
 
@@ -51,6 +52,27 @@ export default function HomeView() {
           <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
         </motion.button>
       </section>
+
+      {/* 置顶内容 */}
+      {pinned.length > 0 && (
+        <section className="space-y-6 md:space-y-8 px-2">
+          <div className="flex items-center gap-3 ml-2 md:ml-4">
+            <h3 className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-[#232f55]/30">Pinned Chronicles</h3>
+            <div className="h-[1px] flex-1 bg-[#232f55]/5" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+            {pinned.map((d: any) => (
+              <DiaryItemCard
+                key={d.id}
+                diary={d}
+                size="md"
+                onClick={() => handleDiaryClick(d)}
+                className="w-full shadow-lg shadow-[#232f55]/5"
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 去年今日 */}
       {lastYear.length > 0 && (

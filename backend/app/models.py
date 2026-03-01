@@ -74,6 +74,7 @@ class Diary(SQLModel, table=True):
     image_count: int = Field(default=0)
     mood: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
     is_favorite: bool = Field(default=False, index=True)
+    is_pinned: bool = Field(default=False, index=True)
     stats: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     location_snapshot: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
     weather_snapshot: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))

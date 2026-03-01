@@ -69,6 +69,7 @@ class DiaryRead(DiaryBase):
     word_count: int
     image_count: int
     is_favorite: bool
+    is_pinned: bool
     date: datetime
     updated_at: datetime
     location_snapshot: Optional[Dict[str, Any]] = None

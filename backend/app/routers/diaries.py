@@ -71,6 +71,11 @@ def get_recent(limit: int = 5, offset: int = 0, user: User = Depends(get_current
     """获取最近的日记列表，支持分页"""
     return session.exec(select(Diary).join(Notebook).where(Notebook.user_id == user.id).order_by(Diary.date.desc()).offset(offset).limit(limit)).all()
 
+@router.get("/pinned", response_model=List[DiaryRead])
+def get_pinned(user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    """获取置顶的日记列表"""
+    return session.exec(select(Diary).join(Notebook).where(and_(Notebook.user_id == user.id, Diary.is_pinned == True)).order_by(Diary.date.desc())).all()
+
 @router.get("/last-year-today", response_model=List[DiaryRead])
 def get_last_year(user: User = Depends(get_current_user), session: Session = Depends(get_session)):
     now = datetime.now(timezone.utc)
@@ -159,6 +164,24 @@ def update_diary(diary_id: int, diary_in: DiaryCreate, user: User = Depends(get_
         session.add(old_notebook)
         
     session.add(db_diary); session.commit(); session.refresh(db_diary); return db_diary
+
+@router.post("/{diary_id}/toggle-pin")
+def toggle_pin(diary_id: int, user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    """切换日记的置顶状态"""
+    diary = session.get(Diary, diary_id)
+    if not diary:
+        raise HTTPException(status_code=404, detail="Diary not found")
+    
+    # 验证用户权限
+    notebook = session.get(Notebook, diary.notebook_id)
+    if not notebook or notebook.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    diary.is_pinned = not diary.is_pinned
+    diary.updated_at = datetime.now(timezone.utc)
+    session.add(diary)
+    session.commit()
+    return {"is_pinned": diary.is_pinned}
 
 @router.delete("/{diary_id}")
 def delete_diary(diary_id: int, user: User = Depends(get_current_user), session: Session = Depends(get_session)):
