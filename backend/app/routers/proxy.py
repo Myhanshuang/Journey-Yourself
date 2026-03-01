@@ -197,7 +197,7 @@ async def proxy_original(
     sig: str = Query(...),
     session: Session = Depends(get_session)
 ):
-    """代理原始图片 - 支持签名验证，无需 Authorization header"""
+    """代理原始图片 - 支持签名验证，按需转换为预览图以支持 HEIC 等格式渲染"""
     valid, user_id = verify_asset_signature(asset_id, sig, session)
     if not valid or not user_id:
         raise HTTPException(403, "Invalid signature")
@@ -205,14 +205,38 @@ async def proxy_original(
     headers, base_url = get_immich_proxy_config(user_id, session)
     if not headers or not base_url:
         raise HTTPException(404, "Immich not configured")
+
+    async with httpx.AsyncClient(base_url=base_url, headers=headers, verify=False, timeout=30.0) as client:
+        # 获取资产信息以检查 MIME 类型
+        info_resp = await client.get(f"/assets/{asset_id}")
+        if info_resp.status_code != 200:
+            raise HTTPException(404, "Asset not found")
+            
+        asset_info = info_resp.json()
+        original_mime = asset_info.get("originalMimeType", "").lower()
+        
+        # 浏览器原生支持的常见图片格式
+        supported_mimes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml", "image/bmp"]
+        
+        if original_mime in supported_mimes:
+            # 格式支持，请求原图
+            target_url = f"/assets/{asset_id}/original"
+            media_type = original_mime
+        else:
+            # 格式不支持（如 HEIC/RAW），请求大尺寸预览图 (JPEG)
+            target_url = f"/assets/{asset_id}/thumbnail?size=preview&format=JPEG"
+            media_type = "image/jpeg"
     
     async def generate():
         async with httpx.AsyncClient(base_url=base_url, headers=headers, verify=False, timeout=300.0) as client:
-            async with client.stream("GET", f"/assets/{asset_id}/original") as response:
+            async with client.stream("GET", target_url) as response:
+                if response.status_code != 200:
+                    yield b""
+                    return
                 async for chunk in response.aiter_bytes():
                     yield chunk
     
-    return StreamingResponse(generate(), media_type="image/jpeg")
+    return StreamingResponse(generate(), media_type=media_type)
 
 
 @router.get("/video/{asset_id}")
