@@ -379,9 +379,19 @@ async def get_bili_video(
     session: Session = Depends(get_session)
 ):
     """获取B站视频数据"""
-    video = session.exec(
-        select(BilibiliVideo).where(BilibiliVideo.video_id == video_id)
-    ).first()
+    video = None
+    
+    # 如果是 BV 号，先通过 bvid 查询
+    if video_id.startswith("BV"):
+        video = session.exec(
+            select(BilibiliVideo).where(BilibiliVideo.bvid == video_id)
+        ).first()
+    
+    # 如果没找到，再通过 video_id (avid) 查询
+    if not video:
+        video = session.exec(
+            select(BilibiliVideo).where(BilibiliVideo.video_id == video_id)
+        ).first()
     
     if not video:
         raise HTTPException(status_code=404, detail="视频未找到")
