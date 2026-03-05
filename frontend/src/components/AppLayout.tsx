@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Grid, BookOpen, History, BarChart2, Settings, Search, LayoutList, Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { notebookApi } from '../lib/api'
 import { SidebarNavItem, GlassHeader, ToastContainer, GlobalConfirmModal, cn, journeySpring } from './ui/JourneyUI'
 import { NotebookModal } from './modals/NotebookModal'
+import { useJourneyNavigation } from '../hooks/useJourneyNavigation'
+import { useScrollPreservation } from '../hooks/useScrollPreservation'
 
 export default function AppLayout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
@@ -13,7 +15,11 @@ export default function AppLayout() {
   const [notebookModal, setNotebookModal] = useState<{ show: boolean, data?: any, afterCreate?: () => void }>({ show: false })
 
   const location = useLocation()
-  const navigate = useNavigate()
+  const { navigate, toWrite, toSearch } = useJourneyNavigation()
+
+  // 这里的滚动容器是 main 区域内部的 div
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const { handleScroll, restorePosition } = useScrollPreservation(scrollRef)
 
   const { data: notebooks = [] } = useQuery({ queryKey: ['notebooks'], queryFn: () => notebookApi.list() })
 
@@ -23,7 +29,6 @@ export default function AppLayout() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // Determine current view from path
   const getCurrentView = () => {
     const path = location.pathname
     if (path.startsWith('/notebooks/') && path !== '/notebooks') return 'notebook-detail'
@@ -44,10 +49,19 @@ export default function AppLayout() {
   }
 
   const handleWriteClick = () => {
+    // 检查当前是否在日记本详情页，如果是，提取 ID 并预选
+    const path = location.pathname
+    let preselectedId: string | number | undefined = undefined
+    
+    if (path.startsWith('/notebooks/') && path !== '/notebooks') {
+      const parts = path.split('/')
+      preselectedId = parts[parts.length - 1]
+    }
+
     if (notebooks.length === 0) {
-      setNotebookModal({ show: true, afterCreate: () => navigate('/write') })
+      setNotebookModal({ show: true, afterCreate: () => toWrite(preselectedId) })
     } else {
-      navigate('/write')
+      toWrite(preselectedId)
     }
   }
 
@@ -101,16 +115,20 @@ export default function AppLayout() {
         <GlassHeader className={cn("px-6 md:px-16", isMobile && "bg-transparent border-none")}>
           <div className="w-10 h-10 hidden md:block" />
           <button
-            onClick={() => navigate('/search')}
+            onClick={toSearch}
             className="flex items-center gap-3 px-6 py-2 bg-white/40 rounded-full w-full max-w-[320px] text-[#232f55]/30 hover:bg-white transition-all text-left outline-none border border-white/50 shadow-sm group"
           >
             <Search size={16} className="group-hover:scale-110 transition-transform" /><span className="text-[13px] font-bold">Search ripples...</span>
           </button>
         </GlassHeader>
 
-        <div className={cn("flex-1 overflow-y-auto no-scrollbar", isMobile ? "px-6 pb-32" : "px-16")}>
+        <div 
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className={cn("flex-1 overflow-y-auto no-scrollbar scroll-smooth", isMobile ? "px-6 pb-32" : "px-16")}
+        >
           <div className="max-w-[1000px] mx-auto min-h-full pt-2 pb-10">
-            <Outlet context={{ notebooks, setNotebookModal, handleWriteClick }} />
+            <Outlet context={{ notebooks, setNotebookModal, handleWriteClick, restorePosition }} />
           </div>
         </div>
 

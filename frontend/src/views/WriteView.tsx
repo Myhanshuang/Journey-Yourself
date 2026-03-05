@@ -8,7 +8,7 @@
  * 4. 退出时检测未保存内容 → ExitConfirmModal
  */
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { diaryApi, notebookApi } from '../lib/api'
 import { useToast } from '../components/ui/JourneyUI'
@@ -21,9 +21,10 @@ import {
   isCacheEmpty 
 } from '../lib/cache'
 import type { DiaryCache } from '../lib/cache'
+import { useJourneyNavigation } from '../hooks/useJourneyNavigation'
 
 export default function WriteView() {
-  const navigate = useNavigate()
+  const { back } = useJourneyNavigation()
   const location = useLocation()
   const queryClient = useQueryClient()
   const addToast = useToast(state => state.add)
@@ -55,7 +56,7 @@ export default function WriteView() {
       clearNewDiaryCache()
       addToast('success', 'Diary published')
       // 返回上一页
-      navigate(-1)
+      back()
     },
     onError: () => {
       addToast('error', 'Failed to save diary')
@@ -130,16 +131,16 @@ export default function WriteView() {
     if (editorRef.current?.hasUnsavedChanges()) {
       setShowExitConfirm(true)
     } else {
-      navigate(-1)
+      back()
     }
-  }, [navigate])
+  }, [back])
   
   // 退出确认 - 放弃
   const handleExitDiscard = useCallback(() => {
     editorRef.current?.clearCache()
     setShowExitConfirm(false)
-    navigate(-1)
-  }, [navigate])
+    back()
+  }, [back])
   
   // 退出确认 - 保存草稿
   const handleExitSaveDraft = useCallback(async () => {
@@ -164,14 +165,14 @@ export default function WriteView() {
       editorRef.current.clearCache()
       queryClient.invalidateQueries()
       setShowExitConfirm(false)
-      navigate(-1)
+      back()
       addToast('success', 'Draft saved')
     } catch (error) {
       addToast('error', 'Failed to save draft')
     } finally {
       setIsSavingDraft(false)
     }
-  }, [queryClient, addToast, navigate])
+  }, [queryClient, addToast, back])
   
   // 退出确认 - 继续编辑
   const handleExitContinue = useCallback(() => {

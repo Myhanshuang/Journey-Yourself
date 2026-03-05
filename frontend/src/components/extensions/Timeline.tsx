@@ -96,7 +96,7 @@ export function TimelineSlider({
                 "select-none touch-none fixed right-[5%] top-1/2 -translate-y-1/2 z-[61] cursor-pointer transition-all duration-200 ease-out",
                 isExpanded 
                     ? "opacity-100 rounded-l-full bg-[radial-gradient(circle_at_left,_rgba(156,163,175,0.9)_0%,_rgba(156,163,175,0.1)_100%)] shadow-[-10px_0_30px_-10px_rgba(35,47,85,0.05)]" 
-                    : "bg-gray-400 opacity-40 rounded-l-2xl w-6 hover:opacity-70 hover:bg-gray-500" // 增加收起时的基础宽度
+                    : "bg-transparent opacity-40 rounded-l-2xl w-6 hover:opacity-70 hover:bg-gray-500" // 增加收起时的基础宽度
             )}
             style={{
                 height: isExpanded ? `${CONFIG.expandedHeight}vh` : `${CONFIG.collapsedHeight}vh`,

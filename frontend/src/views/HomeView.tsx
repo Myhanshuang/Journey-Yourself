@@ -1,9 +1,10 @@
-import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate, useOutletContext } from 'react-router-dom'
+import { useOutletContext } from 'react-router-dom'
 import { diaryApi, userApi } from '../lib/api'
 import { DiaryItemCard, useAdjustedTime } from '../components/ui/JourneyUI'
 import { Sparkles } from 'lucide-react'
+import { useJourneyNavigation } from '../hooks/useJourneyNavigation'
+import { motion } from 'framer-motion'
 
 interface OutletContextType {
   notebooks: any[]
@@ -12,7 +13,7 @@ interface OutletContextType {
 }
 
 export default function HomeView() {
-  const navigate = useNavigate()
+  const { toDiary } = useJourneyNavigation()
   const outletContext = useOutletContext<OutletContextType>()
   const { getAdjusted } = useAdjustedTime()
 
@@ -30,7 +31,7 @@ export default function HomeView() {
   }
 
   const handleDiaryClick = (diary: any) => {
-    navigate(`/diaries/${diary.id}`)
+    toDiary(diary.id)
   }
 
   return (

@@ -4,9 +4,11 @@ import { LayoutList, Calendar as CalendarIcon, X } from 'lucide-react'
 import { cn, DiaryItemCard, useAdjustedTime } from '../components/ui/JourneyUI'
 import { useQuery } from '@tanstack/react-query'
 import { timelineApi } from '../lib/api'
-import { useNavigate, useOutletContext } from 'react-router-dom'
+import { useOutletContext } from 'react-router-dom'
 import { CalendarGrid } from '../components/CalendarGrid'
 import { TimelineSlider } from '../components/extensions/Timeline'
+import { useJourneyNavigation } from '../hooks/useJourneyNavigation'
+import { useJourneyStore } from '../lib/store'
 
 interface OutletContextType {
   notebooks: any[]
@@ -31,9 +33,12 @@ function FilterButton({ label, active, onClick }: any) {
 }
 
 export default function TimelineView() {
-  const navigate = useNavigate()
-  const [filterId, setFilterId] = useState<number | undefined>(undefined)
-  const [mode, setMode] = useState<'stream' | 'calendar'>('stream')
+  const { toDiary } = useJourneyNavigation()
+  const filterId = useJourneyStore((state) => state.timelineFilterId)
+  const setFilterId = useJourneyStore((state) => state.setTimelineFilterId)
+  const mode = useJourneyStore((state) => state.timelineMode)
+  const setMode = useJourneyStore((state) => state.setTimelineMode)
+  
   const [daySelection, setDaySelection] = useState<any[] | null>(null)
   const { getAdjusted } = useAdjustedTime()
   const outletContext = useOutletContext<OutletContextType>()
@@ -46,7 +51,7 @@ export default function TimelineView() {
     queryFn: () => timelineApi.list(filterId)
   })
 
-  // ✅ 修复 1：用 useMemo 缓存分组数据，避免每次滑动全量重算
+  // ✅ 修复 1：用 useMemo 缓存分组数据
   const groupedData = useMemo(() => {
     return diaries.reduce((acc: any, d: any) => {
       const adjDate = getAdjusted(d.date)
@@ -59,45 +64,27 @@ export default function TimelineView() {
     }, {})
   }, [diaries, getAdjusted])
 
-  // ✅ 修复 2：同步缓存 years
   const years = useMemo(() => {
     return Object.keys(groupedData).sort((a, b) => b.localeCompare(a))
   }, [groupedData])
 
-  // -------
-  // 👇 1. 提取包含具体日期的扁平数组（去重），同时插入年份作为过渡节点
   const timelineItems = useMemo(() => {
     const items: { id: string; label: string; isYear?: boolean }[] = [];
-    const seenDates = new Set(); // 用来记录已经被加进滑块的日期
+    const seenDates = new Set();
 
     years.forEach(year => {
-      // 在两年的日记之间插入年份标签
-      items.push({
-        id: `year-${year}`,
-        label: year,
-        isYear: true
-      });
-
+      items.push({ id: `year-${year}`, label: year, isYear: true });
       Object.keys(groupedData[year])
         .sort((a, b) => new Date(`${b} 1, ${year}`).getTime() - new Date(`${a} 1, ${year}`).getTime())
         .forEach(month => {
-          
-          // 深入遍历这个月里的每一篇日记
           groupedData[year][month].forEach((diary: any) => {
             const adjDate = getAdjusted(diary.date);
-            // 格式化为你想要的显示效果，这里用 "月/日"（比如 12/24）
             const dateLabel = `${adjDate.getMonth() + 1}/${adjDate.getDate()}`; 
-
-            // 如果这个日期是今天第一次出现，就把它加进滑块，并记录这篇日记的 id 作为跳板
             if (!seenDates.has(dateLabel)) {
               seenDates.add(dateLabel);
-              items.push({
-                id: diary.id,       // 记录门牌号：这天第一篇日记的 id
-                label: dateLabel    // 记录显示的文字："12/24"
-              });
+              items.push({ id: diary.id, label: dateLabel });
             }
           });
-          
         });
     });
     return items;
@@ -106,30 +93,25 @@ export default function TimelineView() {
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 👇 2. 修改滑动页面的逻辑
   const handleSliderChange = (index: number, behavior: 'auto' | 'smooth' | 'instant' = 'smooth') => {
     setActiveIndex(index);
-    // 现在我们取的是日记本身的 id
     const targetId = timelineItems[index]?.id;
     const el = document.getElementById(`diary-section-${targetId}`);
     
     if (el) {
       isScrollingRef.current = true;
       if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-      // 如果是 instant (auto) 模式，锁定的时间可以短一点，这样拖动才跟手
       scrollTimeoutRef.current = setTimeout(() => { isScrollingRef.current = false; }, behavior === 'smooth' ? 1000 : 100);
 
-      const yOffset = -120; // 稍微多留出一点顶部空间，防止标题挡住日记
+      const yOffset = -120;
       const scrollContainer = el.closest('.overflow-y-auto') as HTMLElement;
 
       if (scrollContainer) {
-        // 当滚动容器是内部 div 时，计算相对位置
         const elementRect = el.getBoundingClientRect();
         const containerRect = scrollContainer.getBoundingClientRect();
         const targetY = scrollContainer.scrollTop + (elementRect.top - containerRect.top) + yOffset;
         scrollContainer.scrollTo({ top: targetY, behavior });
       } else {
-        // Fallback 到 window 滚动
         const elementRect = el.getBoundingClientRect();
         const absoluteElementTop = elementRect.top + window.scrollY;
         const y = absoluteElementTop + yOffset;
@@ -138,21 +120,15 @@ export default function TimelineView() {
     }
   };
 
-  // 👇 3. 修改雷达探测的逻辑
   useEffect(() => {
     if (mode !== 'stream' || timelineItems.length === 0) return;
 
     const observer = new IntersectionObserver((entries) => {
       if (isScrollingRef.current) return; 
-
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          // 剥离出日记 id (这里是字符串)
           const diaryId = entry.target.id.replace('diary-section-', '');
-          
-          // 🌟 核心修复 1：强制将 item.id 转换为字符串再进行比较！
           const newIndex = timelineItems.findIndex(item => String(item.id) === diaryId);
-          
           if (newIndex !== -1) {
             setActiveIndex(newIndex); 
           }
@@ -163,7 +139,6 @@ export default function TimelineView() {
       threshold: 0.6
     });
 
-    // 🌟 核心修复 2：加入 300ms 延迟，等 Framer Motion 动画把元素放入 DOM 后再挂载雷达
     const timer = setTimeout(() => {
       timelineItems.forEach(item => {
         const el = document.getElementById(`diary-section-${item.id}`);
@@ -171,18 +146,14 @@ export default function TimelineView() {
       });
     }, 300);
 
-    // 清理函数
     return () => {
       clearTimeout(timer);
       observer.disconnect();
     };
   }, [timelineItems, mode]);
-  // -------
-  
-  
 
   const handleDiaryClick = (diary: any) => {
-    navigate(`/diaries/${diary.id}`)
+    toDiary(diary.id)
   }
 
   return (
@@ -204,9 +175,6 @@ export default function TimelineView() {
       </AnimatePresence>
 
       <header className="flex flex-col gap-6 md:gap-10">
-
-        
-      {/* 👇 3. 替换：给木偶接上线！ */}
         {timelineItems.length > 0 && mode === 'stream' && (
           <TimelineSlider 
             items={timelineItems}
@@ -256,10 +224,9 @@ export default function TimelineView() {
                           </div>
                           <div className="absolute top-full inset-x-0 h-10 bg-gradient-to-b from-[#F5F5F7] to-transparent pointer-events-none" />
                         </div>
-                        <div className="grid gap-6 relative z-10 px-4">
+                        <div className="grid grid-cols-1 gap-6 relative z-10 px-4">
                           {groupedData[year][month].map((diary: any) => (
-                            // <DiaryItemCard key={diary.id} diary={diary} size="sm" onClick={() => handleDiaryClick(diary)} />
-                            <div key={diary.id} id={`diary-section-${diary.id}`}>
+                            <div key={diary.id} id={`diary-section-${diary.id}`} className="max-w-3xl mx-auto w-full">
                                <DiaryItemCard diary={diary} size="sm" onClick={() => handleDiaryClick(diary)} />
                             </div>
                           ))}

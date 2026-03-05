@@ -1,9 +1,3 @@
-/**
- * JourneyUI - UI 组件库
- * 
- * 导出所有 UI 组件和工具函数，保持向后兼容
- */
-
 import { motion } from 'framer-motion'
 import { ChevronRight, Trash2, Loader2, Pin, PinOff, Edit3, Link2 } from 'lucide-react'
 import { useMotionValue, useTransform } from 'framer-motion'
@@ -24,20 +18,16 @@ export { default as ServiceSetupModal } from '../modals/ServiceSetupModal'
 export { ConfigSelect, type SelectOption } from './custom-select'
 export { ActionMenu, type ActionItem } from './action-menu'
 export { Skeleton } from './skeleton'
-export { Card } from './card' // Use the new Card component
+export { Card } from './card'
 export { ManageListItem } from './ManageListItem'
 export { DatePicker } from './JourneyDatePicker'
 export { TimePicker } from './JourneyTimePicker'
 
-// Import for local use (Legacy components that are still here for now)
 import { cn } from '../../lib/utils'
 import { journeySpring } from '../../lib/constants'
 import { getFirstImage, extractSnippet } from '../../lib/utils'
 import { useAdjustedTime } from '../../hooks/useAdjustedTime'
 import { useIsMobile } from '../../hooks/useMobile'
-
-
-// --- Legacy Components to be refactored or kept for specific logic ---
 
 export function DiaryItemCard({ diary, onClick, className, size = 'md', noHoverEffect = false }: any) {
   const bgImage = getFirstImage(diary.content)
@@ -47,9 +37,10 @@ export function DiaryItemCard({ diary, onClick, className, size = 'md', noHoverE
   const queryClient = useQueryClient()
   const addToast = useToast(state => state.add)
   const adjDate = getAdjusted(diary.date)
+  
   const sizes = isMobile 
-    ? { sm: "p-4", md: "p-5", lg: "p-6" } 
-    : { sm: "p-6", md: "p-8", lg: "p-12" }
+    ? { sm: "p-3.5", md: "p-4", lg: "p-5" } 
+    : { sm: "p-5", md: "p-8", lg: "p-12" }
 
   const pinMutation = useMutation({
     mutationFn: () => diaryApi.togglePin(diary.id),
@@ -64,11 +55,7 @@ export function DiaryItemCard({ diary, onClick, className, size = 'md', noHoverE
   const actions = [
     { label: diary.is_pinned ? 'Unpin' : 'Pin', icon: diary.is_pinned ? <PinOff size={16} /> : <Pin size={16} />, onClick: () => pinMutation.mutate() },
     { label: 'Edit', icon: <Edit3 size={16} />, onClick: () => navigate(`/edit/${diary.id}`) },
-    { label: 'Delete', icon: <Trash2 size={16} />, onClick: () => {
-      // Typically deletion should be handled via a confirmed callback, 
-      // but for simplicity in this shared component we'll use a toast warning if not passed
-      console.warn("Delete clicked from shared card - implementation pending")
-    }, variant: 'danger' as const },
+    { label: 'Delete', icon: <Trash2 size={16} />, onClick: () => console.warn("Delete action pending"), variant: 'danger' as const },
   ]
 
   return (
@@ -76,46 +63,67 @@ export function DiaryItemCard({ diary, onClick, className, size = 'md', noHoverE
       whileHover={!noHoverEffect ? { y: -8 } : {}}
       whileTap={!noHoverEffect ? { scale: 0.985 } : {}}
       transition={journeySpring}
-      onClick={onClick}
-      className={cn("relative bg-white/90 rounded-[40px] overflow-hidden cursor-pointer group shadow-[0_30px_60px_-12px_rgba(35,47,85,0.12)] transition-all flex flex-col", sizes[size as keyof typeof sizes], className)}
+      onTap={onClick} // 第二步：规范化 Tap 机制，由 Framer Motion 自动处理 3px 过滤
+      className={cn(
+        "relative bg-white/90 cursor-pointer group shadow-[0_30px_60px_-12px_rgba(35,47,85,0.12)] transition-all flex flex-col", 
+        isMobile ? (size === 'sm' ? "rounded-[18px]" : "rounded-[24px]") : (size === 'sm' ? "rounded-[24px]" : "rounded-[40px]"),
+        sizes[size as keyof typeof sizes], 
+        className
+      )}
     >
+      {/* ... (pinned and bg image logic) ... */}
       {diary.is_pinned && (
-        <div className="absolute top-6 right-6 z-40 p-2 bg-[#6ebeea]/10 rounded-full">
+        <div className={cn("absolute z-40 p-2 bg-[#6ebeea]/10 rounded-full", isMobile ? "top-3 right-3 scale-60" : "top-4 right-4 scale-75")}>
           <Pin size={16} className="text-[#6ebeea] fill-[#6ebeea]/20" />
         </div>
       )}
       {bgImage && (
-        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        <div className={cn("absolute inset-0 z-0 pointer-events-none overflow-hidden", isMobile ? (size === 'sm' ? "rounded-[18px]" : "rounded-[24px]") : (size === 'sm' ? "rounded-[24px]" : "rounded-[40px]"))}>
           <motion.img src={bgImage} initial={{ scale: 1.1 }} whileHover={{ scale: 1.15 }} transition={{ duration: 1.5 }} className="w-full h-full object-cover opacity-90" />
           <div className="absolute inset-0 z-10 bg-[#f2f4f2]/75 backdrop-blur-[1px]" />
           <div className="absolute inset-0 z-20 bg-gradient-to-br from-[#f2f4f2]/95 via-[#f2f4f2]/40 to-transparent" />
         </div>
       )}
       <div className="relative z-30 flex flex-col h-full text-[#232f55]">
-        <div className={cn("flex items-start mb-6", isMobile ? "gap-4" : "gap-6")}>
-          <div className={cn("bg-[#f2f4f2] rounded-[20px] flex flex-col items-center justify-center shadow-sm border border-white/50 flex-shrink-0 font-black", isMobile ? "w-12 h-12" : "w-14 h-14")}>
-            <span className="text-[10px] text-[#232f55]/40 uppercase leading-none mb-1">{adjDate.toLocaleDateString('en', { month: 'short' })}</span>
-            <span className={cn("leading-none text-[#232f55]", isMobile ? "text-xl" : "text-2xl")}>{adjDate.getDate()}</span>
+        <div className={cn("flex items-start", (size === 'sm' ? "mb-1" : (isMobile ? "mb-3 gap-3" : "mb-6 gap-6")))}>
+          {/* ... (date logic) ... */}
+          <div className={cn(
+            "bg-[#f2f4f2] rounded-[10px] md:rounded-[14px] flex flex-col items-center justify-center shadow-sm border border-white/50 flex-shrink-0 font-black", 
+            isMobile ? (size === 'sm' ? "w-8 h-8" : "w-10 h-10") : (size === 'sm' ? "w-10 h-10" : "w-14 h-14")
+          )}>
+            <span className={cn("text-[#232f55]/40 uppercase leading-none", isMobile ? (size === 'sm' ? "text-[6px] mb-0" : "text-[8px] mb-0.5") : (size === 'sm' ? "text-[8px] mb-0.5" : "text-[10px] mb-1"))}>{adjDate.toLocaleDateString('en', { month: 'short' })}</span>
+            <span className={cn("leading-none text-[#232f55]", isMobile ? (size === 'sm' ? "text-sm" : "text-lg") : (size === 'sm' ? "text-lg" : "text-2xl"))}>{adjDate.getDate()}</span>
           </div>
-          <div className="flex-1 overflow-hidden pr-8">
-            <h4 className={cn("font-black truncate tracking-tighter leading-tight", size === 'lg' ? (isMobile ? 'text-2xl' : 'text-4xl') : (isMobile ? 'text-lg' : 'text-2xl'))}>{diary.title}</h4>
-            <div className="flex items-center gap-4 opacity-60 text-[11px] font-black uppercase tracking-widest text-[#6ebeea] mt-1.5">
+          <div className={cn("flex-1 overflow-hidden", isMobile ? "pr-4" : "pr-6")}>
+            <h4 className={cn("font-black truncate tracking-tighter leading-tight", size === 'lg' ? (isMobile ? 'text-xl' : 'text-4xl') : (size === 'sm' ? (isMobile ? 'text-sm' : 'text-lg') : (isMobile ? 'text-base' : 'text-2xl')))}>{diary.title}</h4>
+            <div className={cn("flex items-center gap-2 md:gap-4 opacity-60 font-black uppercase tracking-widest text-[#6ebeea]", isMobile ? (size === 'sm' ? "text-[7px] mt-0.5" : "text-[9px] mt-1") : (size === 'sm' ? "text-[9px] mt-1" : "text-[11px] mt-1.5"))}>
               <span>{adjDate.getFullYear()}</span>
               <span className="w-1 h-1 rounded-full bg-[#6ebeea]/30" />
-              <span>{diary.word_count || 0} WORDS</span>
+              <span>{diary.word_count || 0} CH</span>
             </div>
           </div>
-          <div className="absolute right-0 top-0 z-50" onClick={e => e.stopPropagation()}>
+          {/* 
+            手术刀式拦截：
+            1. Capture 阶段拦截 PointerDown，彻底屏蔽外层 Framer Motion 的手势感知（drag/onTap）
+            2. Bubbling 阶段拦截 Click，确保点击菜单项后不触发卡片的逻辑
+          */}
+          <div 
+            className="absolute right-0 top-0 z-50"
+            onPointerDownCapture={e => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
+          >
             <ActionMenu actions={actions} />
           </div>
         </div>
-        {size !== 'sm' && <p className="text-[#232f55]/60 font-medium leading-relaxed line-clamp-3 mb-4 text-sm italic">{extractSnippet(diary.content)}</p>}
-        <div className="mt-auto flex items-center justify-between pt-4">
+        {size !== 'sm' && <p className={cn("text-[#232f55]/60 font-medium leading-relaxed italic", isMobile ? "text-xs mb-2 line-clamp-2" : "text-sm mb-4 line-clamp-3")}>{extractSnippet(diary.content)}</p>}
+        <div className={cn("mt-auto flex items-center justify-between", (size === 'sm' ? "pt-0" : (isMobile ? "pt-2" : "pt-4")))}>
           <div className="flex items-center gap-2">
-            {diary.mood && <span className="text-xl filter drop-shadow-sm">{diary.mood.emoji}</span>}
-            {diary.weather_snapshot && <span className="text-lg opacity-60">{diary.weather_snapshot.weather}</span>}
+            {diary.mood && <span className={cn(isMobile ? (size === 'sm' ? "text-base" : "text-lg") : (size === 'sm' ? "text-lg" : "text-xl"), "filter drop-shadow-sm")}>{diary.mood.emoji}</span>}
+            {diary.weather_snapshot && <span className={cn(isMobile ? (size === 'sm' ? "text-[10px]" : "text-xs") : (size === 'sm' ? "text-xs" : "text-lg"), "opacity-60")}>{diary.weather_snapshot.weather}</span>}
           </div>
-          <div className="opacity-0 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-4 transition-all duration-500 p-2 bg-[#f2f4f2] rounded-full shadow-sm"><ChevronRight size={20} className="text-[#6ebeea]" /></div>
+          <div className={cn("opacity-0 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-4 transition-all duration-500 bg-[#f2f4f2] rounded-full shadow-sm", isMobile ? (size === 'sm' ? "p-1" : "p-1.5") : (size === 'sm' ? "p-1.5" : "p-2"))}>
+            <ChevronRight size={isMobile ? (size === 'sm' ? 12 : 16) : (size === 'sm' ? 16 : 20)} className="text-[#6ebeea]" />
+          </div>
         </div>
       </div>
     </motion.div>
@@ -147,7 +155,6 @@ export function SidebarNavItem({ icon, label, active, onClick, collapsed }: any)
   )
 }
 
-// Deprecated in favor of Button component, but kept for compatibility or aliasing
 export function ActionButton({ children, onClick, className, icon: Icon, loading }: any) {
   const isMobile = useIsMobile()
   return (

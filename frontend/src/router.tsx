@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
 import AppLayout from './components/AppLayout'
 import LoginView from './views/LoginView'
+import { NavigationHandler } from './components/NavigationHandler'
 
 // Lazy load views
 const HomeView = lazy(() => import('./views/HomeView'))
@@ -43,19 +44,29 @@ function AuthGuard() {
   if (!token) {
     return <Navigate to="/login" replace />
   }
-  return <Outlet />
+  return (
+    <NavigationHandler>
+      <Outlet />
+    </NavigationHandler>
+  )
 }
 
 export const router = createBrowserRouter([
   {
     path: '/login',
-    element: <LoginView />,
+    element: (
+      <NavigationHandler>
+        <LoginView />
+      </NavigationHandler>
+    ),
   },
   {
     path: '/share/:token',
     element: (
       <Suspense fallback={<PageLoader />}>
-        <ShareView />
+        <NavigationHandler>
+          <ShareView />
+        </NavigationHandler>
       </Suspense>
     ),
   },

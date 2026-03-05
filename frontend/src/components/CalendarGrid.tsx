@@ -1,9 +1,9 @@
-import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { journeySpring } from '../lib/constants'
 import { useAdjustedTime } from '../hooks/useAdjustedTime'
+import { useJourneyStore } from '../lib/store'
 
 interface CalendarGridProps {
   diaries: any[]
@@ -11,8 +11,15 @@ interface CalendarGridProps {
 }
 
 export function CalendarGrid({ diaries, onDateClick }: CalendarGridProps) {
-  const [curr, setCurr] = useState(new Date())
+  const calendarViewDate = useJourneyStore((state) => state.calendarViewDate);
+  const setCalendarViewDate = useJourneyStore((state) => state.setCalendarViewDate);
+  
+  const curr = new Date(calendarViewDate);
   const { getAdjusted } = useAdjustedTime()
+
+  const setCurr = (date: Date) => {
+    setCalendarViewDate(date.toISOString());
+  };
 
   const days = Array.from(
     { length: new Date(curr.getFullYear(), curr.getMonth() + 1, 0).getDate() },
@@ -32,7 +39,11 @@ export function CalendarGrid({ diaries, onDateClick }: CalendarGridProps) {
           </h3>
           <div className="flex items-center gap-2 md:gap-3 bg-slate-100 p-1 md:p-1.5 rounded-2xl">
             <button
-              onClick={() => setCurr(new Date(curr.setFullYear(curr.getFullYear() - 1)))}
+              onClick={() => {
+                const d = new Date(curr);
+                d.setFullYear(d.getFullYear() - 1);
+                setCurr(d);
+              }}
               className="p-1.5 md:p-2 hover:bg-white rounded-xl text-slate-400"
             >
               <ChevronsLeft size={18} />
@@ -41,7 +52,11 @@ export function CalendarGrid({ diaries, onDateClick }: CalendarGridProps) {
               {curr.getFullYear()}
             </span>
             <button
-              onClick={() => setCurr(new Date(curr.setFullYear(curr.getFullYear() + 1)))}
+              onClick={() => {
+                const d = new Date(curr);
+                d.setFullYear(d.getFullYear() + 1);
+                setCurr(d);
+              }}
               className="p-1.5 md:p-2 hover:bg-white rounded-xl text-slate-400"
             >
               <ChevronsRight size={18} />
@@ -50,13 +65,21 @@ export function CalendarGrid({ diaries, onDateClick }: CalendarGridProps) {
         </div>
         <div className="flex gap-3 md:gap-4">
           <button
-            onClick={() => setCurr(new Date(curr.setMonth(curr.getMonth() - 1)))}
+            onClick={() => {
+              const d = new Date(curr);
+              d.setMonth(d.getMonth() - 1);
+              setCurr(d);
+            }}
             className="p-3 md:p-4 bg-white shadow-md rounded-2xl md:rounded-[24px] hover:bg-slate-50 transition-all border border-slate-100 text-slate-900"
           >
             <ChevronLeft size={20} />
           </button>
           <button
-            onClick={() => setCurr(new Date(curr.setMonth(curr.getMonth() + 1)))}
+            onClick={() => {
+              const d = new Date(curr);
+              d.setMonth(d.getMonth() + 1);
+              setCurr(d);
+            }}
             className="p-3 md:p-4 bg-white shadow-md rounded-2xl md:rounded-[24px] hover:bg-slate-50 transition-all border border-slate-100 text-slate-900"
           >
             <ChevronRight size={20} />

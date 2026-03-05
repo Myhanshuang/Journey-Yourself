@@ -178,12 +178,13 @@ export default function NotebookDetailView() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-20 text-center text-slate-300 italic font-medium">Empty chapters.</motion.div>
           ) : (
             diaries.map((diary: any) => (
-              <DiaryListItem
-                key={diary.id}
-                diary={diary}
-                onTap={() => handleDiaryClick(diary)}
-                onDelete={() => handleDeleteDiary(diary.id)}
-              />
+              <div key={diary.id} className="max-w-3xl mx-auto w-full">
+                <DiaryListItem
+                  diary={diary}
+                  onTap={() => handleDiaryClick(diary)}
+                  onDelete={() => handleDeleteDiary(diary.id)}
+                />
+              </div>
             ))
           )}
         </AnimatePresence>

@@ -27,7 +27,8 @@ import { Bookmark } from '../components/extensions/Bookmark'
 import { NotionBlock } from '../components/extensions/NotionBlock'
 import { XhsPost } from '../components/extensions/XhsPost'
 import { BilibiliVideo } from '../components/extensions/BilibiliVideo'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useOutletContext } from 'react-router-dom'
+import { useJourneyNavigation } from '../hooks/useJourneyNavigation'
 
 import 'katex/dist/katex.min.css'
 
@@ -35,9 +36,14 @@ const WEATHER_ICONS: any = {
   "☀️": Sun, "⛅️": Cloud, "☁️": Cloud, "🌧️": CloudRain, "⛈️": CloudLightning, "❄️": Snowflake, "💨": Wind, "🌫️": Wind
 }
 
+interface OutletContextType {
+  restorePosition: (pos?: number) => void;
+}
+
 export default function DiaryDetailView() {
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
+  const { back, toEdit } = useJourneyNavigation()
+  const { restorePosition } = useOutletContext<OutletContextType>()
   const queryClient = useQueryClient()
   const addToast = useToast(state => state.add)
   const askConfirm = useConfirm(state => state.ask)
@@ -100,11 +106,16 @@ export default function DiaryDetailView() {
     },
   })
 
+  // 关键优化：内容加载后恢复位置
   useEffect(() => {
     if (editor && diary?.content) {
-      editor.commands.setContent(diary.content)
+      editor.commands.setContent(diary.content);
+      // 给编辑器一点点渲染时间，确保 DOM 高度已经撑开
+      setTimeout(() => {
+        restorePosition();
+      }, 100);
     }
-  }, [diary?.content, editor])
+  }, [diary?.content, editor, restorePosition])
 
   const handleDelete = () => {
     askConfirm(
@@ -115,19 +126,14 @@ export default function DiaryDetailView() {
           await diaryApi.delete(Number(id))
           queryClient.invalidateQueries()
           addToast('success', 'Memory erased forever')
-          navigate(-1)
+          back()
         } catch (e) { addToast('error', 'Failed to erase memory') }
       }
     )
   }
 
-  const handleBack = () => {
-    navigate(-1)
-  }
-
-  const handleEdit = () => {
-    navigate(`/edit/${id}`)
-  }
+  const handleBack = () => back()
+  const handleEdit = () => id && toEdit(id)
 
   const shareMutation = useMutation({
     mutationFn: () => shareApi.create({ diary_id: Number(id), expires_in_days: 7 }),
@@ -146,7 +152,6 @@ export default function DiaryDetailView() {
 
   const handleCopyLink = () => {
     if (shareLink) {
-      // 兼容非 HTTPS 环境
       if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(shareLink)
       } else {
@@ -215,14 +220,12 @@ export default function DiaryDetailView() {
       <div className="max-w-[800px] mx-auto">
         <div className="flex flex-wrap items-center gap-3 mb-8">
           {diary.mood && <div className="flex items-center gap-2 bg-white/80 backdrop-blur-md px-4 py-2 rounded-2xl shadow-sm border border-white/50"><span className="text-xl">{diary.mood.emoji}</span><span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{diary.mood.label}</span></div>}
-
           {diary.location_snapshot && (
             <div className="flex items-center gap-2 bg-[#6ebeea]/10 text-[#6ebeea] px-4 py-2 rounded-2xl border border-[#6ebeea]/20 shadow-sm">
               <MapPin size={12} strokeWidth={3} />
               <span className="text-[10px] font-black uppercase tracking-tight">{diary.location_snapshot.name || 'Footprint'}</span>
             </div>
           )}
-
           {diary.weather_snapshot && (
             <div className="flex items-center gap-2 bg-[#232f55]/5 text-[#232f55] px-4 py-2 rounded-2xl border border-[#232f55]/10 shadow-sm">
               {WIcon && <WIcon size={14} strokeWidth={3} />}
@@ -259,7 +262,6 @@ export default function DiaryDetailView() {
         <EditorContent editor={editor} />
       </div>
 
-      {/* Share Modal */}
       {showShareModal && (
         <div className="fixed inset-0 z-[100] bg-black/5 backdrop-blur-md flex items-center justify-center p-6" onClick={() => setShowShareModal(false)}>
           <motion.div
