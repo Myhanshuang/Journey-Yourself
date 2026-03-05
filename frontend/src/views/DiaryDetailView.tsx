@@ -8,6 +8,7 @@ import { diaryApi, shareApi } from '../lib/api'
 import { useJourneyStore } from '../lib/store'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useEffect, useState, useRef, useLayoutEffect } from 'react'
+import { useTogglePin } from '../hooks/useTogglePin'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Gapcursor } from '@tiptap/extension-gapcursor'
@@ -66,21 +67,7 @@ export default function DiaryDetailView() {
     enabled: !!id,
   })
 
-  const pinMutation = useMutation({
-    mutationFn: () => diaryApi.togglePin(Number(id)),
-    onSuccess: () => {
-      // 立即更新本地缓存，确保 UI 同步更新
-      queryClient.setQueryData(['diary', Number(id)], (old: any) => ({
-        ...old,
-        is_pinned: !old?.is_pinned
-      }))
-      // 同时使相关查询失效，以便后台刷新
-      queryClient.invalidateQueries({ queryKey: ['diaries', 'pinned'] })
-      queryClient.invalidateQueries({ queryKey: ['diaries', 'recent'] })
-      addToast('success', diary?.is_pinned ? 'Unpinned from top' : 'Pinned to top')
-    },
-    onError: () => addToast('error', 'Failed to toggle pin')
-  })
+  const pinMutation = useTogglePin(Number(id), diary?.is_pinned ?? false)
 
   const handleTogglePin = () => {
     pinMutation.mutate()

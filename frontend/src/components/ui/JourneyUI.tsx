@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion'
 import { ChevronRight, Trash2, Loader2, Pin, PinOff, Edit3, Link2 } from 'lucide-react'
 import { useMotionValue, useTransform } from 'framer-motion'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { diaryApi } from '../../lib/api'
 import { ActionMenu } from './action-menu'
 import { useToast } from '../../hooks/useToast'
+import { useTogglePin } from '../../hooks/useTogglePin'
 
 // Re-export from new locations
 export { cn, getFirstImage, extractSnippet, getAssetUrl, getBaseUrl } from '../../lib/utils'
@@ -28,8 +29,10 @@ import { journeySpring } from '../../lib/constants'
 import { getFirstImage, extractSnippet } from '../../lib/utils'
 import { useAdjustedTime } from '../../hooks/useAdjustedTime'
 import { useIsMobile } from '../../hooks/useMobile'
+import { useConfirm } from '../../hooks/useConfirm'
+import { useDeleteDiary } from '../../hooks/useDeleteDiary'
 
-export function DiaryItemCard({ diary, onClick, className, size = 'md', noHoverEffect = false }: any) {
+export function DiaryItemCard({ diary, onClick, onDelete, className, size = 'md', noHoverEffect = false }: any) {
   const bgImage = getFirstImage(diary.content)
   const { getAdjusted } = useAdjustedTime()
   const isMobile = useIsMobile()
@@ -37,56 +40,28 @@ export function DiaryItemCard({ diary, onClick, className, size = 'md', noHoverE
   const queryClient = useQueryClient()
   const addToast = useToast(state => state.add)
   const adjDate = getAdjusted(diary.date)
+  const { deleteDiary } = useDeleteDiary()
   
   const sizes = isMobile 
     ? { sm: "p-3.5", md: "p-4", lg: "p-5" } 
     : { sm: "p-5", md: "p-8", lg: "p-12" }
 
-  const pinMutation = useMutation({
-    mutationFn: () => diaryApi.togglePin(diary.id),
-    onMutate: async () => {
-      // 取消正在进行的查询，防止乐观更新被覆盖
-      await queryClient.cancelQueries({ queryKey: ['diaries'] })
-      await queryClient.cancelQueries({ queryKey: ['diary', diary.id] })
-      
-      // 保存旧值以便回滚
-      const previousDiary = queryClient.getQueryData(['diary', diary.id])
-      
-      // 乐观更新单个日记
-      queryClient.setQueryData(['diary', diary.id], (old: any) => ({
-        ...old,
-        is_pinned: !old?.is_pinned
-      }))
-      
-      // 乐观更新所有 diaries 列表
-      queryClient.setQueriesData({ queryKey: ['diaries'] }, (old: any) => {
-        if (!old || !Array.isArray(old)) return old
-        return old.map((d: any) => d.id === diary.id ? { ...d, is_pinned: !d.is_pinned } : d)
-      })
-      
-      return { previousDiary }
-    },
-    onError: (err, variables, context) => {
-      // 回滚
-      if (context?.previousDiary) {
-        queryClient.setQueryData(['diary', diary.id], context.previousDiary)
-      }
-      queryClient.invalidateQueries({ queryKey: ['diaries'] })
-    },
-    onSettled: () => {
-      // 重新获取数据确保同步
-      queryClient.invalidateQueries({ queryKey: ['diaries'] })
-      queryClient.invalidateQueries({ queryKey: ['diary', diary.id] })
-    },
-    onSuccess: () => {
-      addToast('success', diary.is_pinned ? 'Unpinned' : 'Pinned')
+  const pinMutation = useTogglePin(diary.id, diary.is_pinned)
+
+  const handleDelete = () => {
+    if (onDelete) {
+      // 如果传入了 onDelete，使用它
+      onDelete()
+    } else {
+      // 否则使用内置的删除逻辑
+      deleteDiary(diary.id, diary.title)
     }
-  })
+  }
 
   const actions = [
     { label: diary.is_pinned ? 'Unpin' : 'Pin', icon: diary.is_pinned ? <PinOff size={16} /> : <Pin size={16} />, onClick: () => pinMutation.mutate() },
     { label: 'Edit', icon: <Edit3 size={16} />, onClick: () => navigate(`/edit/${diary.id}`) },
-    { label: 'Delete', icon: <Trash2 size={16} />, onClick: () => console.warn("Delete action pending"), variant: 'danger' as const },
+    { label: 'Delete', icon: <Trash2 size={16} />, onClick: handleDelete, variant: 'danger' as const },
   ]
 
   return (
