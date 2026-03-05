@@ -39,7 +39,13 @@ export function ActionMenu({ actions }: { actions: ActionItem[] }) {
 
   useEffect(() => {
     if (isOpen) {
-      const close = () => setIsOpen(false)
+      const close = (e: MouseEvent | TouchEvent) => {
+        // 如果点击的是菜单内部或触发按钮，不关闭
+        if (menuRef.current?.contains(e.target as Node) || triggerRef.current?.contains(e.target as Node)) {
+          return
+        }
+        setIsOpen(false)
+      }
       window.addEventListener('scroll', updatePosition, true)
       window.addEventListener('resize', updatePosition)
       window.addEventListener('mousedown', close)
