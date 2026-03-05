@@ -51,6 +51,14 @@ export const useScrollPreservation = (containerRef: React.RefObject<HTMLElement>
     const originalVisibility = container.style.visibility;
     container.style.visibility = 'hidden';
 
+    // 超时保护：确保即使数据加载失败，容器也会显示
+    const timeoutId = window.setTimeout(() => {
+      if (!restoredRef.current) {
+        container.style.visibility = originalVisibility;
+        restoredRef.current = true;
+      }
+    }, 200); // 2秒超时
+
     const tryRestore = () => {
       if (restoredRef.current) return;
       
@@ -59,6 +67,7 @@ export const useScrollPreservation = (containerRef: React.RefObject<HTMLElement>
         container.scrollTo({ top: targetPos, behavior: 'instant' });
         container.style.visibility = originalVisibility;
         restoredRef.current = true;
+        window.clearTimeout(timeoutId);
       }
     };
 
@@ -74,6 +83,7 @@ export const useScrollPreservation = (containerRef: React.RefObject<HTMLElement>
 
     return () => {
       resizeObserver.disconnect();
+      window.clearTimeout(timeoutId);
       container.style.visibility = originalVisibility;
       if (timerRef.current) window.clearTimeout(timerRef.current);
     };

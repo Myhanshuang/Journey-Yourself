@@ -126,7 +126,11 @@ export default function DiaryDetailView() {
 
   // 使用 useLayoutEffect 同步恢复阅读位置，避免闪烁
   useLayoutEffect(() => {
-    if (!editor || !diary?.content) return
+    // 如果编辑器或内容不存在，直接显示页面
+    if (!editor || !diary?.content) {
+      setContentReady(true)
+      return
+    }
     
     const container = scrollContainerRef.current
     if (!container || !id) {
