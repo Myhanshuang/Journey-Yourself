@@ -14,6 +14,7 @@ interface OutletContextType {
   notebooks: any[]
   setNotebookModal: (config: { show: boolean; data?: any; afterCreate?: () => void }) => void
   handleWriteClick: () => void
+  restorePosition: (pos?: number) => void
 }
 
 function FilterButton({ label, active, onClick }: any) {

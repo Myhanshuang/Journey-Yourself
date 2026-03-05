@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useLayoutEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useJourneyStore } from '../lib/store';
 
@@ -10,9 +10,8 @@ export const useScrollPreservation = (containerRef: React.RefObject<HTMLElement>
   const location = useLocation();
   const targetKey = key || location.pathname;
   
-  // 仅在组件挂载时获取一次初始位置，避免响应式订阅导致的性能问题
-  const initialPos = useRef(useJourneyStore.getState().scrollPositions[targetKey] || 0);
   const timerRef = useRef<number | null>(null);
+  const restoredRef = useRef(false);
 
   const savePosition = useCallback(() => {
     if (containerRef.current) {
@@ -28,22 +27,57 @@ export const useScrollPreservation = (containerRef: React.RefObject<HTMLElement>
     timerRef.current = window.setTimeout(savePosition, 100);
   }, [savePosition]);
 
-  // 恢复位置逻辑：对外暴露，让子组件在数据加载完成后手动触发
+  // 恢复位置逻辑：直接从 store 获取最新位置，确保路由切换后能获取正确的值
   const restorePosition = useCallback((customPos?: number) => {
     if (containerRef.current) {
-      const pos = customPos ?? initialPos.current;
+      const pos = customPos ?? useJourneyStore.getState().scrollPositions[targetKey] ?? 0;
       containerRef.current.scrollTo({ top: pos, behavior: 'instant' });
     }
-  }, [containerRef]);
+  }, [containerRef, targetKey]);
 
-  // 默认恢复（用于列表页）
-  useEffect(() => {
-    const timeout = setTimeout(restorePosition, 50);
-    return () => {
-      if (timerRef.current) window.clearTimeout(timerRef.current);
-      clearTimeout(timeout);
+  // 使用 ResizeObserver 智能恢复：等待容器高度足够时恢复
+  useLayoutEffect(() => {
+    restoredRef.current = false;
+    const container = containerRef.current;
+    if (!container) return;
+
+    const targetPos = useJourneyStore.getState().scrollPositions[targetKey] ?? 0;
+    if (targetPos === 0) {
+      restoredRef.current = true;
+      return;
+    }
+
+    // 恢复前隐藏容器内容
+    const originalVisibility = container.style.visibility;
+    container.style.visibility = 'hidden';
+
+    const tryRestore = () => {
+      if (restoredRef.current) return;
+      
+      const maxScroll = container.scrollHeight - container.clientHeight;
+      if (maxScroll >= targetPos) {
+        container.scrollTo({ top: targetPos, behavior: 'instant' });
+        container.style.visibility = originalVisibility;
+        restoredRef.current = true;
+      }
     };
-  }, [restorePosition, targetKey]);
+
+    // 立即尝试恢复（处理有缓存数据的情况）
+    tryRestore();
+
+    // 使用 ResizeObserver 监听内容高度变化
+    const resizeObserver = new ResizeObserver(() => {
+      tryRestore();
+    });
+
+    resizeObserver.observe(container);
+
+    return () => {
+      resizeObserver.disconnect();
+      container.style.visibility = originalVisibility;
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+    };
+  }, [containerRef, targetKey]);
 
   return { handleScroll, restorePosition };
 };

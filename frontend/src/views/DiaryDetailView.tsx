@@ -5,8 +5,9 @@ import {
 } from 'lucide-react'
 import { useAdjustedTime, useConfirm, useToast, journeySpring, useIsMobile, cn, ActionMenu, getBaseUrl } from '../components/ui/JourneyUI'
 import { diaryApi, shareApi } from '../lib/api'
+import { useJourneyStore } from '../lib/store'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useLayoutEffect } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Gapcursor } from '@tiptap/extension-gapcursor'
@@ -52,6 +53,11 @@ export default function DiaryDetailView() {
   const [shareLink, setShareLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const isMobile = useIsMobile()
+  
+  // 阅读进度保存和恢复
+  const scrollContainerRef = useRef<HTMLElement | null>(null)
+  const readingTimerRef = useRef<number | null>(null)
+  const [contentReady, setContentReady] = useState(false)
 
   // Fetch diary by ID
   const { data: diary, isLoading, error } = useQuery({
@@ -106,16 +112,65 @@ export default function DiaryDetailView() {
     },
   })
 
-  // 关键优化：内容加载后恢复位置
+  // 获取滚动容器引用
+  useEffect(() => {
+    scrollContainerRef.current = document.querySelector('.overflow-y-auto')
+  }, [])
+
+  // 设置编辑器内容
   useEffect(() => {
     if (editor && diary?.content) {
       editor.commands.setContent(diary.content);
-      // 给编辑器一点点渲染时间，确保 DOM 高度已经撑开
-      setTimeout(() => {
-        restorePosition();
-      }, 100);
     }
-  }, [diary?.content, editor, restorePosition])
+  }, [diary?.content, editor])
+
+  // 使用 useLayoutEffect 同步恢复阅读位置，避免闪烁
+  useLayoutEffect(() => {
+    if (!editor || !diary?.content) return
+    
+    const container = scrollContainerRef.current
+    if (!container || !id) {
+      setContentReady(true)
+      return
+    }
+
+    // 优先使用百分比恢复阅读进度
+    const readingPercent = useJourneyStore.getState().readingPositions[id]
+    if (readingPercent !== undefined && readingPercent > 0) {
+      const maxScroll = container.scrollHeight - container.clientHeight
+      const scrollPos = readingPercent * maxScroll
+      container.scrollTo({ top: scrollPos, behavior: 'instant' })
+    } else {
+      // 回退到像素位置恢复
+      restorePosition()
+    }
+    
+    // 恢复完成后显示内容
+    setContentReady(true)
+  }, [diary?.content, editor, restorePosition, id])
+
+  // 滚动时保存阅读进度（百分比）
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container || !id) return
+
+    const handleReadingScroll = () => {
+      if (readingTimerRef.current) window.clearTimeout(readingTimerRef.current)
+      readingTimerRef.current = window.setTimeout(() => {
+        const maxScroll = container.scrollHeight - container.clientHeight
+        if (maxScroll > 0) {
+          const percent = container.scrollTop / maxScroll
+          useJourneyStore.getState().setReadingPosition(id, percent)
+        }
+      }, 200)
+    }
+
+    container.addEventListener('scroll', handleReadingScroll)
+    return () => {
+      container.removeEventListener('scroll', handleReadingScroll)
+      if (readingTimerRef.current) window.clearTimeout(readingTimerRef.current)
+    }
+  }, [id])
 
   const handleDelete = () => {
     askConfirm(
@@ -199,10 +254,9 @@ export default function DiaryDetailView() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      transition={journeySpring}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: contentReady ? 1 : 0 }}
+      transition={{ duration: 0.2 }}
       className="pt-0 pb-32 space-y-6 text-[#232f55]"
     >
       <header className="flex items-center justify-between pt-2">
