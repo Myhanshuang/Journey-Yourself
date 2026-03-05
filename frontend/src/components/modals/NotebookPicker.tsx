@@ -42,7 +42,7 @@ export default function NotebookPicker({ notebooks, selectedId, onSelect, onClos
       </div>
 
       {/* 列表区域 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4 max-h-[50vh] overflow-y-auto">
          {filtered.map((nb: any) => (
            <button 
              key={nb.id} 
