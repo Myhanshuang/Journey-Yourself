@@ -69,7 +69,12 @@ export default function DiaryDetailView() {
   const pinMutation = useMutation({
     mutationFn: () => diaryApi.togglePin(Number(id)),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['diary', Number(id)] })
+      // 立即更新本地缓存，确保 UI 同步更新
+      queryClient.setQueryData(['diary', Number(id)], (old: any) => ({
+        ...old,
+        is_pinned: !old?.is_pinned
+      }))
+      // 同时使相关查询失效，以便后台刷新
       queryClient.invalidateQueries({ queryKey: ['diaries', 'pinned'] })
       queryClient.invalidateQueries({ queryKey: ['diaries', 'recent'] })
       addToast('success', diary?.is_pinned ? 'Unpinned from top' : 'Pinned to top')

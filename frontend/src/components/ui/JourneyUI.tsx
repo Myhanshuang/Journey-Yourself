@@ -44,10 +44,41 @@ export function DiaryItemCard({ diary, onClick, className, size = 'md', noHoverE
 
   const pinMutation = useMutation({
     mutationFn: () => diaryApi.togglePin(diary.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['diaries', 'pinned'] })
-      queryClient.invalidateQueries({ queryKey: ['diaries', 'recent'] })
+    onMutate: async () => {
+      // 取消正在进行的查询，防止乐观更新被覆盖
+      await queryClient.cancelQueries({ queryKey: ['diaries'] })
+      await queryClient.cancelQueries({ queryKey: ['diary', diary.id] })
+      
+      // 保存旧值以便回滚
+      const previousDiary = queryClient.getQueryData(['diary', diary.id])
+      
+      // 乐观更新单个日记
+      queryClient.setQueryData(['diary', diary.id], (old: any) => ({
+        ...old,
+        is_pinned: !old?.is_pinned
+      }))
+      
+      // 乐观更新所有 diaries 列表
+      queryClient.setQueriesData({ queryKey: ['diaries'] }, (old: any) => {
+        if (!old || !Array.isArray(old)) return old
+        return old.map((d: any) => d.id === diary.id ? { ...d, is_pinned: !d.is_pinned } : d)
+      })
+      
+      return { previousDiary }
+    },
+    onError: (err, variables, context) => {
+      // 回滚
+      if (context?.previousDiary) {
+        queryClient.setQueryData(['diary', diary.id], context.previousDiary)
+      }
+      queryClient.invalidateQueries({ queryKey: ['diaries'] })
+    },
+    onSettled: () => {
+      // 重新获取数据确保同步
+      queryClient.invalidateQueries({ queryKey: ['diaries'] })
       queryClient.invalidateQueries({ queryKey: ['diary', diary.id] })
+    },
+    onSuccess: () => {
       addToast('success', diary.is_pinned ? 'Unpinned' : 'Pinned')
     }
   })
