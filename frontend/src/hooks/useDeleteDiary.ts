@@ -27,6 +27,7 @@ export function useDeleteDiary() {
           await diaryApi.delete(diaryId)
           // 使所有相关查询失效
           queryClient.invalidateQueries({ queryKey: ['diaries'] })
+          queryClient.invalidateQueries({ queryKey: ['timeline'] })
           queryClient.invalidateQueries({ queryKey: ['diary', diaryId] })
           queryClient.invalidateQueries({ queryKey: ['notebook'] })
           addToast('success', 'Memory erased')
