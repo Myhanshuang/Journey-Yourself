@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { userApi } from '../lib/api'
+import { useCallback } from 'react'
 
 /**
  * 时区调整 Hook
@@ -12,7 +13,7 @@ export function useAdjustedTime() {
     staleTime: Infinity
   })
 
-  const getAdjusted = (date?: Date | string) => {
+  const getAdjusted = useCallback((date?: Date | string) => {
     if (!date) return new Date()
 
     let dStr = typeof date === 'string' ? date : date.toISOString()
@@ -47,7 +48,7 @@ export function useAdjustedTime() {
     } catch (e) {
       return new Date(utcDate.getTime() + (user?.time_offset_mins || 0) * 60000)
     }
-  }
+  }, [user?.timezone, user?.time_offset_mins])
 
   return {
     getAdjusted,
