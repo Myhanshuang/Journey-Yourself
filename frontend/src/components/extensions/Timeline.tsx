@@ -115,7 +115,7 @@ export function TimelineSlider({
                     const collapsedY = offset * (CONFIG.collapsedHeight / numbersATime);
 
                     const isYear = item.isYear;
-                    const opacityFactor = Math.max(0, 1 - Math.abs(offset) * (isYear ? 0.2 : 0.3));
+                    const opacityFactor = Math.max(0, 1 - Math.abs(offset) * (isYear ? 0.05 : 0.1));
 
                     return (
                         <div 
