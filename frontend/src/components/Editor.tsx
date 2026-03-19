@@ -83,6 +83,15 @@ interface EditorProps {
   onCacheRestored?: () => void
 }
 
+function normalizeNotebookId(value: unknown): number | undefined {
+  if (typeof value === 'number' && !Number.isNaN(value)) return value
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (!Number.isNaN(parsed)) return parsed
+  }
+  return undefined
+}
+
 const DiaryEditor = forwardRef<EditorRef, EditorProps>(({ 
   onSave, 
   onClose, 
@@ -105,8 +114,13 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
     return initialData?.title || ''
   })
   const [selectedNotebookId, setSelectedNotebookId] = useState<number>(() => {
-    if (cacheToRestore) return cacheToRestore.notebookId
-    return initialNotebookId || initialData?.notebook_id || notebooks[0]?.id
+    return (
+      normalizeNotebookId(cacheToRestore?.notebookId)
+      ?? normalizeNotebookId(initialNotebookId)
+      ?? normalizeNotebookId(initialData?.notebook_id)
+      ?? normalizeNotebookId(notebooks[0]?.id)
+      ?? 0
+    )
   })
   const [mood, setMood] = useState<any>(() => {
     if (cacheToRestore) return cacheToRestore.mood
@@ -331,6 +345,21 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
     }
   }, [initialData, editor, cacheToRestore])
 
+  useEffect(() => {
+    if (cacheToRestore || isEditingExisting || notebooks.length === 0) return
+
+    const preferredNotebookId =
+      normalizeNotebookId(initialNotebookId)
+      ?? normalizeNotebookId(notebooks[0]?.id)
+
+    if (!preferredNotebookId) return
+
+    const hasSelectedNotebook = notebooks.some((notebook: any) => notebook.id === selectedNotebookId)
+    if (!hasSelectedNotebook || selectedNotebookId !== preferredNotebookId) {
+      setSelectedNotebookId(preferredNotebookId)
+    }
+  }, [cacheToRestore, initialNotebookId, isEditingExisting, notebooks, selectedNotebookId])
+
   if (!editor) return null
   const currentNotebook = notebooks.find((n:any) => n.id === selectedNotebookId) || notebooks[0]
 
@@ -422,9 +451,16 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
     clearCache()
   }
 
+  const mobileHeaderTop = 'var(--app-safe-top, 0px)'
+  const mobileToolbarTop = 'calc(var(--app-safe-top, 0px) + 4rem)'
+  const mobileContentTop = 'calc(var(--app-safe-top, 0px) + 7.5rem)'
+
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="fixed inset-0 bg-[#f2f4f2] z-[200] flex flex-col overflow-hidden text-[#232f55] font-sans">
-      <header className="h-16 md:h-20 border-b border-[#232f55]/5 px-4 md:px-8 flex items-center justify-between bg-white/80 backdrop-blur-md fixed top-0 left-0 right-0 z-[210] flex-shrink-0">
+      <header
+        className="h-16 md:h-20 border-b border-[#232f55]/5 px-4 md:px-8 flex items-center justify-between bg-white/80 backdrop-blur-md fixed top-0 left-0 right-0 z-[210] flex-shrink-0"
+        style={isMobile ? { top: mobileHeaderTop } : undefined}
+      >
         <div className="flex items-center gap-2 md:gap-4">
           <button onClick={onClose} className="p-2 md:p-3 hover:bg-slate-50 rounded-2xl transition-colors text-slate-400"><ArrowLeft size={20} /></button>
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-[65vw]">
@@ -453,7 +489,10 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
         </div>
       </header>
 
-      <div className="bg-white/40 border-b border-[#232f55]/5 px-4 md:px-8 py-2 flex items-center gap-1 overflow-x-auto no-scrollbar shadow-inner fixed top-16 md:top-20 left-0 right-0 z-[205] flex-shrink-0">
+      <div
+        className="bg-white/40 border-b border-[#232f55]/5 px-4 md:px-8 py-2 flex items-center gap-1 overflow-x-auto no-scrollbar shadow-inner fixed top-16 md:top-20 left-0 right-0 z-[205] flex-shrink-0"
+        style={isMobile ? { top: mobileToolbarTop } : undefined}
+      >
         <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} icon={<Bold size={18} />} />
         <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} icon={<Italic size={18} />} />
         <ToolbarButton onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} icon={<UnderlineIcon size={18} />} />
@@ -509,7 +548,10 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
         />
       </div>
 
-      <div className={cn("flex-1 overflow-y-auto pt-[120px] md:pt-[140px]", isMobile ? "px-4" : "md:px-0")}>
+      <div
+        className={cn("flex-1 overflow-y-auto pt-[120px] md:pt-[140px]", isMobile ? "px-4" : "md:px-0")}
+        style={isMobile ? { paddingTop: mobileContentTop } : undefined}
+      >
         <div className="max-w-[840px] mx-auto pb-40 text-[#232f55]">
            <input className={cn("w-full bg-transparent border-none outline-none font-black tracking-tighter placeholder:text-[#232f55]/10 text-[#232f55] mb-8 md:mb-12", isMobile ? "text-4xl" : "text-4xl md:text-7xl")} placeholder="Title..." value={title} onChange={e => setTitle(e.target.value)} />
            <div className="h-px bg-[#232f55]/5 w-20 md:w-40 mb-10 md:mb-16" />

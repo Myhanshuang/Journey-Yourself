@@ -236,8 +236,12 @@ h1, h2, h3, h4, h5, h6 {
 /* --- Mobile App Specific Overrides --- */
 
 /* Safe area spacing for mobile app */
+body.mobile-app {
+  --app-safe-top: calc(env(safe-area-inset-top, 0px) + 5vh);
+}
+
 body.mobile-app #root {
-  padding-top: 5vh;
+  padding-top: var(--app-safe-top);
   height: 100vh;
   box-sizing: border-box;
 }

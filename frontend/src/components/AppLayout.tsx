@@ -51,11 +51,14 @@ export default function AppLayout() {
   const handleWriteClick = () => {
     // 检查当前是否在日记本详情页，如果是，提取 ID 并预选
     const path = location.pathname
-    let preselectedId: string | number | undefined = undefined
+    let preselectedId: number | undefined = undefined
     
     if (path.startsWith('/notebooks/') && path !== '/notebooks') {
       const parts = path.split('/')
-      preselectedId = parts[parts.length - 1]
+      const notebookId = Number(parts[parts.length - 1])
+      if (!Number.isNaN(notebookId)) {
+        preselectedId = notebookId
+      }
     }
 
     if (notebooks.length === 0) {
