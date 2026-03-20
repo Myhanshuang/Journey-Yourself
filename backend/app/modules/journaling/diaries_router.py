@@ -4,29 +4,14 @@ from app.database import get_session
 from app.models import Diary, Notebook, Tag, User
 from app.schemas import DiaryCreate, DiaryRead
 from app.auth import get_current_user
-from typing import List, Dict, Any
+from typing import List
 from datetime import datetime, timezone
-import re
+
+from app.modules.journaling.helpers.content_stats import walk_content
+from app.modules.journaling.helpers.cover_image import resolve_cover_image_url
+from app.modules.notebooks.helpers.stats_snapshot import update_stats_snapshot
 
 router = APIRouter(prefix="/api/diaries", tags=["diaries"])
-
-# ... Word count and content processing logic ...
-def count_words_cjk(text: str) -> int:
-    if not text: return 0
-    pattern = re.compile(r'[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af\u20000-\u2fa1f]|[a-zA-Z0-9]+(?:\'[a-zA-Z0-9]+)?')
-    return len(pattern.findall(text))
-
-def walk_content(content: Dict[str, Any]) -> tuple[int, int]:
-    t = ""; i = 0
-    if "content" in content:
-        for node in content["content"]:
-            def rec(n):
-                nonlocal t, i
-                if n.get("type") == "text": t += n.get("text", "")
-                elif n.get("type") == "image": i += 1
-                for c in n.get("content", []): rec(c)
-            rec(node)
-    return count_words_cjk(t), i
 
 def sync_tags(session: Session, tag_names: List[str]) -> List[Tag]:
     db_tags = []
@@ -54,15 +39,15 @@ async def create_diary(diary_in: DiaryCreate, user: User = Depends(get_current_u
     db_diary = Diary(
         notebook_id=diary_in.notebook_id, title=diary_in.title, content=diary_in.content,
         date=diary_in.date or now, updated_at=now,
+        cover_image_url=resolve_cover_image_url(diary_in.content),
         word_count=wc, image_count=ic, mood=diary_in.mood,
         location_snapshot=loc,
         weather_snapshot=weather_data
     )
     if diary_in.tags: db_diary.tags = sync_tags(session, diary_in.tags)
     session.add(db_diary)
-    # 更新笔记本统计
-    s = dict(notebook.stats_snapshot); s["total_words"] = s.get("total_words", 0) + wc
-    s["total_entries"] = s.get("total_entries", 0) + 1; notebook.stats_snapshot = s; session.add(notebook)
+    notebook.stats_snapshot = update_stats_snapshot(notebook.stats_snapshot, words_delta=wc, entries_delta=1)
+    session.add(notebook)
     session.commit(); session.refresh(db_diary); return db_diary
 
 # 注意：特定路径路由必须在参数路由 /{diary_id} 之前定义
@@ -121,6 +106,7 @@ def update_diary(diary_id: int, diary_in: DiaryCreate, user: User = Depends(get_
     
     db_diary.title = diary_in.title
     db_diary.content = diary_in.content
+    db_diary.cover_image_url = resolve_cover_image_url(diary_in.content)
     db_diary.mood = diary_in.mood
     db_diary.location_snapshot = diary_in.location
     
@@ -140,27 +126,16 @@ def update_diary(diary_id: int, diary_in: DiaryCreate, user: User = Depends(get_
         if not new_notebook or new_notebook.user_id != user.id:
             raise HTTPException(status_code=404, detail="Target notebook not found")
         
-        # 更新旧笔记本统计：减少 entries 和 words
-        old_stats = dict(old_notebook.stats_snapshot)
-        old_stats["total_words"] = max(0, old_stats.get("total_words", 0) - old_wc)
-        old_stats["total_entries"] = max(0, old_stats.get("total_entries", 0) - 1)
-        old_notebook.stats_snapshot = old_stats
+        old_notebook.stats_snapshot = update_stats_snapshot(old_notebook.stats_snapshot, words_delta=-old_wc, entries_delta=-1)
         session.add(old_notebook)
         
-        # 更新新笔记本统计：增加 entries 和 words
-        new_stats = dict(new_notebook.stats_snapshot)
-        new_stats["total_words"] = new_stats.get("total_words", 0) + wc
-        new_stats["total_entries"] = new_stats.get("total_entries", 0) + 1
-        new_notebook.stats_snapshot = new_stats
+        new_notebook.stats_snapshot = update_stats_snapshot(new_notebook.stats_snapshot, words_delta=wc, entries_delta=1)
         session.add(new_notebook)
         
         # 更新日记的 notebook_id
         db_diary.notebook_id = new_notebook_id
     else:
-        # notebook_id 未变，只更新字数统计
-        old_stats = dict(old_notebook.stats_snapshot)
-        old_stats["total_words"] = old_stats.get("total_words", 0) - old_wc + wc
-        old_notebook.stats_snapshot = old_stats
+        old_notebook.stats_snapshot = update_stats_snapshot(old_notebook.stats_snapshot, words_delta=wc - old_wc)
         session.add(old_notebook)
         
     session.add(db_diary); session.commit(); session.refresh(db_diary); return db_diary
@@ -194,7 +169,6 @@ def delete_diary(diary_id: int, user: User = Depends(get_current_user), session:
     if not notebook or notebook.user_id != user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     
-    # 更新笔记本统计
-    s = dict(notebook.stats_snapshot); s["total_words"] = max(0, s.get("total_words", 0) - diary.word_count)
-    s["total_entries"] = max(0, s.get("total_entries", 0) - 1); notebook.stats_snapshot = s; session.add(notebook)
+    notebook.stats_snapshot = update_stats_snapshot(notebook.stats_snapshot, words_delta=-diary.word_count, entries_delta=-1)
+    session.add(notebook)
     session.delete(diary); session.commit(); return {"status": "ok"}

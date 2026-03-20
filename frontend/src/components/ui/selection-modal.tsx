@@ -34,22 +34,22 @@ export function SelectionModal({
       isOpen={isOpen}
       onClose={onClose}
       variant={variant}
-      className={cn("flex flex-col max-h-[90vh]", className)}
+      className={cn("flex flex-col max-h-[90vh] overflow-hidden", className)}
     >
       {/* Header */}
-      <div className="flex-none px-6 pt-6 pb-4">
+      <div className="flex-none px-4 pt-4 pb-3">
         <Typography variant="h3" className="text-[#232f55] mb-1">{title}</Typography>
         {subtitle && <Typography variant="label" className="text-slate-400 block">{subtitle}</Typography>}
       </div>
 
       {/* Content Area - Scrollable */}
-      <div className="flex-1 overflow-y-auto px-6 pb-4 min-h-0">
+      <div className="flex-1 overflow-y-auto px-4 pb-3 min-h-0">
         {children}
       </div>
 
       {/* Footer / Actions */}
-      <div className="flex-none px-6 pb-safe pt-2 bg-white/95 backdrop-blur-sm border-t border-slate-50 mt-auto">
-        <div className="flex gap-3 py-4">
+      <div className="flex-none px-4 pb-safe pt-1 bg-white/95 backdrop-blur-sm border-t border-slate-50 mt-auto overflow-hidden">
+        <div className="flex gap-3 py-3">
           <Button 
             variant="ghost" 
             onClick={onClose}

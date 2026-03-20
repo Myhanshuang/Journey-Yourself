@@ -37,7 +37,7 @@ async def run_daily_summary():
     """
     logger.info("[Scheduler] Starting daily summary task")
     
-    from app.routers.tasks import process_user_daily_summary
+    from app.modules.automation.tasks_router import process_user_daily_summary
     
     with Session(engine) as session:
         # 获取所有配置了 Karakeep 和 AI 的用户

@@ -3,8 +3,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from app.api.app import router as app_query_router
+from app.api.v1 import router as v1_router
 from app.database import create_db_and_tables
-from app.routers import auth, notebooks, diaries, proxy, assets, amap, users, timeline, stats, tags, share, karakeep, tasks, search, notion, media_crawler
 from app.scheduler import start_scheduler, shutdown_scheduler
 from app.config import settings
 import os
@@ -46,7 +47,7 @@ app.add_middleware(
 @app.middleware("http")
 async def add_cache_control_header(request, call_next):
     response = await call_next(request)
-    if request.url.path.startswith(("/uploads", "/xhs", "/bilibili", "/assets")):
+    if request.url.path.startswith(("/uploads", "/xhs", "/bilibili", "/assets", "/cover_cache")):
         response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
     return response
 
@@ -59,9 +60,13 @@ if not os.path.exists("data/xhs"):
 if not os.path.exists("data/bilibili"):
     os.makedirs("data/bilibili")
 
+if not os.path.exists("data/cover_cache"):
+    os.makedirs("data/cover_cache")
+
 app.mount("/uploads", StaticFiles(directory="data/uploads"), name="uploads")
 app.mount("/xhs", StaticFiles(directory="data/xhs"), name="xhs")
 app.mount("/bilibili", StaticFiles(directory="data/bilibili"), name="bilibili")
+app.mount("/cover_cache", StaticFiles(directory="data/cover_cache"), name="cover_cache")
 
 # 确保备份目录存在
 os.makedirs(BACKUP_DIR, exist_ok=True)
@@ -107,22 +112,8 @@ async def on_shutdown():
 def health_check():
     return {"status": "ok"}
 
-app.include_router(auth.router)
-app.include_router(notebooks.router)
-app.include_router(diaries.router)
-app.include_router(proxy.router)
-app.include_router(assets.router)
-app.include_router(amap.router)
-app.include_router(users.router)
-app.include_router(timeline.router)
-app.include_router(stats.router)
-app.include_router(tags.router)
-app.include_router(share.router)
-app.include_router(karakeep.router)
-app.include_router(tasks.router)
-app.include_router(search.router)
-app.include_router(notion.router)
-app.include_router(media_crawler.router)
+app.include_router(v1_router)
+app.include_router(app_query_router)
 
 # --- 生产环境静态文件托管 ---
 # 双重检查：先检查相对路径（Docker），再检查绝对路径（本地开发）

@@ -3,10 +3,11 @@ import { ChevronRight, Trash2, Loader2, Pin, PinOff, Edit3, Link2 } from 'lucide
 import { useMotionValue, useTransform } from 'framer-motion'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
+import { useDeleteDiary } from '../../features/journaling/entry-actions/useDeleteDiary'
+import { useTogglePin } from '../../features/journaling/entry-actions/useTogglePin'
 import { diaryApi } from '../../lib/api'
 import { ActionMenu } from './action-menu'
 import { useToast } from '../../hooks/useToast'
-import { useTogglePin } from '../../hooks/useTogglePin'
 
 // Re-export from new locations
 export { cn, getFirstImage, extractSnippet, getAssetUrl, getBaseUrl } from '../../lib/utils'
@@ -30,10 +31,9 @@ import { getFirstImage, extractSnippet } from '../../lib/utils'
 import { useAdjustedTime } from '../../hooks/useAdjustedTime'
 import { useIsMobile } from '../../hooks/useMobile'
 import { useConfirm } from '../../hooks/useConfirm'
-import { useDeleteDiary } from '../../hooks/useDeleteDiary'
 
 export function DiaryItemCard({ diary, onClick, onDelete, className, size = 'md', noHoverEffect = false }: any) {
-  const bgImage = getFirstImage(diary.content)
+  const bgImage = diary.cover_image_url ?? getFirstImage(diary.content)
   const { getAdjusted } = useAdjustedTime()
   const isMobile = useIsMobile()
   const navigate = useNavigate()

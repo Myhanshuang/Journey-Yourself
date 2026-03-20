@@ -6,12 +6,12 @@ import { NavigationHandler } from './components/NavigationHandler'
 
 // Lazy load views
 const HomeView = lazy(() => import('./views/HomeView'))
-const TimelineView = lazy(() => import('./views/TimelineView'))
+const TimelineView = lazy(() => import('./views/discovery/TimelineView'))
 const NotebooksListView = lazy(() => import('./views/NotebooksListView'))
-const NotebookDetailView = lazy(() => import('./views/NotebookDetailView'))
-const DiaryDetailView = lazy(() => import('./views/DiaryDetailView'))
+const NotebookDetailView = lazy(() => import('./views/notebooks/NotebookDetailView'))
+const DiaryDetailView = lazy(() => import('./views/diary/DiaryDetailView'))
 const StatsView = lazy(() => import('./views/StatsView'))
-const SettingsView = lazy(() => import('./views/SettingsView'))
+const SettingsView = lazy(() => import('./views/settings/SettingsView'))
 const SearchView = lazy(() => import('./views/SearchView'))
 const WriteView = lazy(() => import('./views/WriteView'))
 const EditView = lazy(() => import('./views/EditView'))

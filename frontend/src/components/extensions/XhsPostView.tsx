@@ -352,7 +352,7 @@ export default function XhsPostView({ node, selected }: XhsPostViewProps) {
                             const getRootId = (commentId: string) => {
                               let current = commentMap.get(commentId);
                               let rootId = current?.comment_id;
-                              let seen = new Set();
+                              const seen = new Set();
                               while(current && current.parent_comment_id && current.parent_comment_id !== '0' && current.parent_comment_id !== 0) {
                                 if (seen.has(current.comment_id)) break;
                                 seen.add(current.comment_id);

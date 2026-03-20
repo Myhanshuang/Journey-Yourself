@@ -70,6 +70,7 @@ class Diary(SQLModel, table=True):
     date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     content: Dict[str, Any] = Field(sa_column=Column(JSON))
+    cover_image_url: Optional[str] = None
     word_count: int = Field(default=0, index=True)
     image_count: int = Field(default=0)
     mood: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))

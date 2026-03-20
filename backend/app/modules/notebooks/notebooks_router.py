@@ -7,16 +7,16 @@ from app.auth import get_current_user
 from typing import List
 from datetime import datetime
 
+from app.modules.notebooks.helpers.default_cover import build_default_cover
+
 router = APIRouter(prefix="/api/notebooks", tags=["notebooks"])
 
 @router.post("/", response_model=NotebookRead)
 def create_notebook(notebook_in: NotebookCreate, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
-    # 使用更有质感的默认封面
-    default_cover = f"https://picsum.photos/seed/{notebook_in.name}/800/1000"
     db_notebook = Notebook(
         name=notebook_in.name,
         description=notebook_in.description,
-        cover_url=notebook_in.cover_url or default_cover,
+        cover_url=notebook_in.cover_url or build_default_cover(notebook_in.name),
         user_id=current_user.id,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()
@@ -92,7 +92,7 @@ def ensure_draft_notebook(current_user: User = Depends(get_current_user), sessio
     draft_notebook = Notebook(
         name=DRAFT_NOTEBOOK_NAME,
         description="Auto-saved drafts and unfinished entries",
-        cover_url=f"https://picsum.photos/seed/{DRAFT_NOTEBOOK_NAME}/800/1000",
+        cover_url=build_default_cover(DRAFT_NOTEBOOK_NAME),
         user_id=current_user.id,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()

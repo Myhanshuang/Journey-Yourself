@@ -24,7 +24,7 @@ export const Image = TiptapImage.extend({
   },
 
   renderHTML({ HTMLAttributes }) {
-    let src = getAssetUrl(HTMLAttributes.src) || HTMLAttributes.src
+    const src = getAssetUrl(HTMLAttributes.src) || HTMLAttributes.src
     return [
       'img',
       mergeAttributes(this.options.HTMLAttributes, { ...HTMLAttributes, src }),

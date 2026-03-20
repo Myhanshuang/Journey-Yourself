@@ -23,12 +23,14 @@ import { Bookmark } from '../components/extensions/Bookmark'
 import { NotionBlock } from '../components/extensions/NotionBlock'
 import { XhsPost } from '../components/extensions/XhsPost'
 import { BilibiliVideo } from '../components/extensions/BilibiliVideo'
-import { shareApi } from '../lib/api'
 import { journeySpring } from '../components/ui/JourneyUI'
+import { appQueryApi, type PublicShareEntry, type PublicShareSummary } from '../shared/api/appQuery'
 
 import 'katex/dist/katex.min.css'
 
-const WEATHER_ICONS: any = {
+type WeatherIconComponent = typeof Cloud
+
+const WEATHER_ICONS: Record<string, WeatherIconComponent> = {
   "☀️": Sun, "⛅️": Cloud, "☁️": Cloud, "🌧️": CloudRain, "⛈️": CloudLightning, "❄️": Snowflake, "💨": Wind, "🌫️": Wind
 }
 
@@ -36,16 +38,22 @@ export default function ShareView() {
   const { token } = useParams<{ token: string }>()
   const navigate = useNavigate()
 
-  const { data: shareData, isLoading, error } = useQuery({
+  const { data: shareData, isLoading, error } = useQuery<PublicShareSummary>({
     queryKey: ['share', token],
-    queryFn: () => shareApi.getPublic(token!),
+    queryFn: () => appQueryApi.publicShareSummary(token!),
     enabled: !!token,
     retry: false
   })
 
   const diary = shareData?.diary
   const notebook = shareData?.notebook
-  const diaries = shareData?.diaries || []
+  const { data: notebookEntries = [], isLoading: isLoadingNotebookEntries } = useQuery<PublicShareEntry[]>({
+    queryKey: ['app', 'public-share', token, 'entries'],
+    queryFn: () => appQueryApi.publicShareEntriesAll(token!, { limit: 100 }),
+    enabled: !!token && shareData?.share_type === 'notebook' && !!notebook,
+    retry: false
+  })
+  const diaries = notebookEntries
 
   const editor = useEditor({
     editable: false,
@@ -82,7 +90,7 @@ export default function ShareView() {
     }
   }, [diary?.content, editor])
 
-  if (isLoading) {
+  if (isLoading || isLoadingNotebookEntries) {
     return (
       <div className="min-h-screen bg-[#f2f4f2] flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-[#6ebeea]/30 border-t-[#6ebeea] rounded-full animate-spin" />
@@ -124,7 +132,7 @@ export default function ShareView() {
             <h3 className="text-xs font-black uppercase tracking-[0.3em] text-slate-300 ml-4">
               {diaries.length} {diaries.length === 1 ? 'Entry' : 'Entries'}
             </h3>
-            {diaries.map((d: any) => (
+            {diaries.map((d) => (
               <NotebookDiaryItem key={d.id} diary={d} />
             ))}
           </div>
@@ -192,7 +200,7 @@ export default function ShareView() {
 
         {diary.tags && diary.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-8">
-            {diary.tags.map((t: any) => (
+            {diary.tags.map((t) => (
               <span key={t} className="flex items-center gap-1.5 px-4 py-2 bg-white/50 text-[#232f55]/60 rounded-full text-[10px] font-black uppercase tracking-widest border border-white shadow-sm">
                 <Tag size={10} strokeWidth={3} /> {t}
               </span>
@@ -212,7 +220,7 @@ export default function ShareView() {
   )
 }
 
-function NotebookDiaryItem({ diary }: { diary: any }) {
+function NotebookDiaryItem({ diary }: { diary: PublicShareEntry }) {
   const [expanded, setExpanded] = useState(false)
 
   const editor = useEditor({

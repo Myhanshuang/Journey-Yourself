@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
-import { statsApi } from '../lib/api'
 import { Card, cn, useIsMobile } from '../components/ui/JourneyUI'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from 'recharts'
 import { Zap, BookOpen, Target, Activity } from 'lucide-react'
+import { appQueryApi, type StatsSummaryPayload } from '../shared/api/appQuery'
 
 const COLORS = ['#232f55', '#6ebeea', '#D4A373', '#ef4444', '#8b5cf6', '#ec4899']
 const RANGE_OPTIONS = [7, 30, 90, 180]
@@ -12,9 +12,9 @@ const RANGE_OPTIONS = [7, 30, 90, 180]
 export default function StatsView() {
   const [days, setDays] = useState(30)
   const isMobile = useIsMobile()
-  const { data, isLoading } = useQuery({ 
-    queryKey: ['stats', days], 
-    queryFn: () => statsApi.get(days) 
+  const { data, isLoading } = useQuery<StatsSummaryPayload>({ 
+    queryKey: ['app', 'stats', days], 
+    queryFn: () => appQueryApi.statsSummary(days) 
   })
 
   if (isLoading) return (
@@ -107,13 +107,13 @@ export default function StatsView() {
             <ResponsiveContainer width="100%" height="60%">
               <PieChart>
                 <Pie data={moods} innerRadius={isMobile ? 60 : 70} outerRadius={isMobile ? 80 : 90} paddingAngle={8} dataKey="count" nameKey="label" stroke="none">
-                  {moods.map((_:any, index:number) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} cornerRadius={10} />)}
+                  {moods.map((_, index: number) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} cornerRadius={10} />)}
                 </Pie>
                 <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 40px rgba(0,0,0,0.05)' }} />
               </PieChart>
             </ResponsiveContainer>
             <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-8">
-               {moods.slice(0, 6).map((m: any, i: number) => (
+               {moods.slice(0, 6).map((m, i: number) => (
                  <div key={m.label} className="flex items-center gap-3">
                     <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
                     <span className="text-[11px] font-black uppercase tracking-widest text-slate-400">{m.label}</span>
@@ -128,7 +128,19 @@ export default function StatsView() {
   )
 }
 
-function StatCard({ label, value, sub, icon, color }: any) {
+function StatCard({
+  label,
+  value,
+  sub,
+  icon,
+  color,
+}: {
+  label: string
+  value: string | number
+  sub: string
+  icon: React.ReactNode
+  color: 'blue' | 'lightBlue' | 'sand'
+}) {
   const isMobile = useIsMobile()
   const themes = {
     blue: "text-[#232f55] bg-[#232f55]/5 shadow-[#232f55]/10",

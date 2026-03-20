@@ -1,11 +1,14 @@
-from fastapi import APIRouter, Depends
-from sqlmodel import Session, select
-from app.database import get_session
-from app.models import Tag, User
-from app.auth import get_current_user
 from typing import List
 
+from fastapi import APIRouter, Depends
+from sqlmodel import Session, select
+
+from app.auth import get_current_user
+from app.database import get_session
+from app.models import Tag, User
+
 router = APIRouter(prefix="/api/tags", tags=["tags"])
+
 
 @router.get("/", response_model=List[str])
 def list_tags(current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):

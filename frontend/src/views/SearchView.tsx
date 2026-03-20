@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Search, X, Smile, Sun, Tag as TagIcon, Loader2, Check, Book, Bookmark, ExternalLink } from 'lucide-react'
 import { cn, DiaryItemCard, useIsMobile } from '../components/ui/JourneyUI'
 import { useQuery } from '@tanstack/react-query'
-import { timelineApi, notebookApi, searchApi } from '../lib/api'
+import { notebookApi } from '../lib/api'
 import api from '../lib/api'
 import { useNavigate } from 'react-router-dom'
+import { appQueryApi, type BookmarkSearchItem, type EntryCard } from '../shared/api/appQuery'
 
 const MOOD_OPTIONS = ['Happy', 'Excited', 'Celebrate', 'Inspired', 'Thoughtful', 'Relaxed', 'Chill', 'Sad', 'Angry', 'Tired']
 const WEATHER_OPTIONS = ['☀️', '⛅️', '☁️', '🌧️', '⛈️', '❄️', '💨']
@@ -13,22 +14,44 @@ const WEATHER_OPTIONS = ['☀️', '⛅️', '☁️', '🌧️', '⛈️', '❄
 export default function SearchView() {
   const navigate = useNavigate()
   const [q, setQ] = useState('')
-  const [filters, setFilters] = useState<any>({ mood: null, weather: null, tag: null, notebook_id: null, include_diaries: true, include_bookmarks: true })
+  const [filters, setFilters] = useState({
+    mood: null as string | null,
+    weather: null as string | null,
+    tag: null as string | null,
+    notebook_id: null as number | null,
+    include_diaries: true,
+    include_bookmarks: true,
+  })
   const [activePicker, setActivePicker] = useState<'mood' | 'weather' | 'tag' | 'notebook' | null>(null)
   const isMobile = useIsMobile()
 
   const { data: allTags = [] } = useQuery({ queryKey: ['tags'], queryFn: () => api.get('/tags/').then(r => r.data) })
   const { data: notebooks = [] } = useQuery({ queryKey: ['notebooks'], queryFn: notebookApi.list })
 
-  const { data: results = { diaries: [], bookmarks: [] }, isLoading } = useQuery({
-    queryKey: ['search', q, filters],
-    queryFn: () => searchApi.unified({ q, ...filters }),
-    enabled: q.length > 0 || Object.values(filters).some((v: any) => v !== null && v !== true) // logic adjust
+  const searchEnabled = q.length > 0 || Object.values(filters).some((v) => v !== null && v !== true)
+
+  const { data: diaries = [], isLoading: isLoadingDiaries } = useQuery<EntryCard[]>({
+    queryKey: ['app', 'search', 'entries', q, filters],
+    queryFn: () => appQueryApi.searchEntries({
+      q,
+      tag: filters.tag ?? undefined,
+      mood: filters.mood ?? undefined,
+      weather: filters.weather ?? undefined,
+      notebookId: filters.notebook_id ?? undefined,
+    }),
+    enabled: searchEnabled && filters.include_diaries
   })
 
-  const selectedNotebookName = notebooks.find((n: any) => n.id === filters.notebook_id)?.name
+  const { data: bookmarks = [], isLoading: isLoadingBookmarks } = useQuery<BookmarkSearchItem[]>({
+    queryKey: ['app', 'search', 'bookmarks', q, filters.tag],
+    queryFn: () => appQueryApi.searchBookmarks({ q, tag: filters.tag ?? undefined }),
+    enabled: searchEnabled && filters.include_bookmarks
+  })
 
-  const handleDiaryClick = (diary: any) => {
+  const isLoading = isLoadingDiaries || isLoadingBookmarks
+  const selectedNotebookName = notebooks.find((n: { id: number; name: string }) => n.id === filters.notebook_id)?.name
+
+  const handleDiaryClick = (diary: EntryCard) => {
     navigate(`/diaries/${diary.id}`)
   }
 
@@ -36,7 +59,7 @@ export default function SearchView() {
     navigate(-1)
   }
 
-  const hasResults = results.diaries.length > 0 || results.bookmarks.length > 0
+  const hasResults = diaries.length > 0 || bookmarks.length > 0
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1000] bg-[#f2f4f2]/95 backdrop-blur-3xl overflow-y-auto text-[#232f55]">
@@ -87,7 +110,7 @@ export default function SearchView() {
                   <button onClick={() => setActivePicker(null)} className="text-slate-400 hover:text-slate-900 transition-colors"><X size={14} /></button>
                 </div>
                 <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto">
-                  {activePicker === 'notebook' && notebooks.map((n: any) => (
+                  {activePicker === 'notebook' && notebooks.map((n: { id: number; name: string }) => (
                     <button key={n.id} onClick={() => { setFilters({ ...filters, notebook_id: n.id }); setActivePicker(null); }} className="px-4 py-3 rounded-xl bg-slate-50 hover:bg-[#6ebeea]/10 text-sm font-bold transition-all text-left flex justify-between items-center truncate">{n.name} {filters.notebook_id === n.id && <Check size={12} />}</button>
                   ))}
                   {activePicker === 'mood' && MOOD_OPTIONS.map(m => (
@@ -111,26 +134,26 @@ export default function SearchView() {
             <div className="py-20 text-center animate-pulse"><Loader2 className="animate-spin mx-auto text-[#6ebeea] mb-4" size={48} /><p className="text-xs font-black uppercase text-[#232f55]/20 tracking-widest">Scanning ripples...</p></div>
           ) : hasResults ? (
             <>
-                {filters.include_diaries && results.diaries.length > 0 && (
+                {filters.include_diaries && diaries.length > 0 && (
                     <div className="space-y-6">
                         <div className="flex items-center gap-4 ml-4">
                             <span className="w-2 h-2 rounded-full bg-[#232f55]" />
-                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#232f55]/40">Diaries ({results.diaries.length})</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#232f55]/40">Diaries ({diaries.length})</p>
                         </div>
                         <div className="grid gap-4 md:gap-8">
-                            {results.diaries.map((d: any) => <DiaryItemCard key={d.id} diary={d} size={isMobile ? "sm" : "md"} onClick={() => handleDiaryClick(d)} />)}
+                            {diaries.map((d) => <DiaryItemCard key={d.id} diary={d} size={isMobile ? "sm" : "md"} onClick={() => handleDiaryClick(d)} />)}
                         </div>
                     </div>
                 )}
                 
-                {filters.include_bookmarks && results.bookmarks.length > 0 && (
+                {filters.include_bookmarks && bookmarks.length > 0 && (
                     <div className="space-y-6">
                         <div className="flex items-center gap-4 ml-4">
                             <span className="w-2 h-2 rounded-full bg-pink-500" />
-                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#232f55]/40">Bookmarks ({results.bookmarks.length})</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#232f55]/40">Bookmarks ({bookmarks.length})</p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {results.bookmarks.map((b: any) => <BookmarkCard key={b.id || Math.random()} bookmark={b} />)}
+                            {bookmarks.map((b, index) => <BookmarkCard key={b.id ?? b.url ?? index} bookmark={b} />)}
                         </div>
                     </div>
                 )}
@@ -147,7 +170,7 @@ export default function SearchView() {
   )
 }
 
-function FilterToggle({ label, active, onClick }: any) {
+function FilterToggle({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
     return (
         <button onClick={onClick} className={cn("px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider border transition-all", active ? "bg-[#232f55] text-white border-[#232f55]" : "bg-transparent border-slate-300 text-slate-400 hover:border-[#232f55] hover:text-[#232f55]")}>
             {label}
@@ -155,7 +178,7 @@ function FilterToggle({ label, active, onClick }: any) {
     )
 }
 
-function BookmarkCard({ bookmark }: any) {
+function BookmarkCard({ bookmark }: { bookmark: BookmarkSearchItem }) {
     return (
         <a href={bookmark.url} target="_blank" rel="noreferrer" className="block bg-white p-6 rounded-[32px] shadow-sm hover:shadow-xl transition-all group border border-transparent hover:border-pink-100">
             <div className="flex items-start justify-between mb-4">
@@ -170,7 +193,19 @@ function BookmarkCard({ bookmark }: any) {
     )
 }
 
-function FilterButton({ icon, label, active, onClick, onClear }: any) {
+function FilterButton({
+  icon,
+  label,
+  active,
+  onClick,
+  onClear,
+}: {
+  icon: React.ReactNode
+  label: string
+  active: boolean
+  onClick: () => void
+  onClear: () => void
+}) {
   return (
     <div className="relative">
       <button

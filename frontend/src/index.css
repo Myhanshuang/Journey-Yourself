@@ -237,7 +237,8 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Safe area spacing for mobile app */
 body.mobile-app {
-  --app-safe-top: calc(env(safe-area-inset-top, 0px) + 5vh);
+  --app-safe-top: calc(env(safe-area-inset-top, 0px) /*+ 5vh */);
+  --app-safe-bottom: calc(env(safe-area-inset-bottom, 0px)/* + 3vh*/);
 }
 
 body.mobile-app #root {
@@ -280,4 +281,8 @@ body.mobile-app ::-webkit-scrollbar {
 body.mobile-app .h-screen {
   height: 100% !important;
   min-height: 0 !important;
+}
+
+.editor-prose-safe {
+  padding-bottom: var(--editor-safe-bottom-space, 10rem);
 }

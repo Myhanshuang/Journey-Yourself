@@ -22,8 +22,8 @@ import { XhsPost } from './extensions/XhsPost'
 import { BilibiliVideo } from './extensions/BilibiliVideo'
 import { useEffect, useState, useRef, useCallback, useImperativeHandle, forwardRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  Bold, Italic, Underline as UnderlineIcon, List, 
+import {
+  Bold, Italic, Underline as UnderlineIcon, List,
   ImageIcon, Save, ArrowLeft, Book,
   Heading1, Heading2, Quote, Code, ListOrdered, MapPin, Smile, Cloud, Tag, Sun,
   Table as TableIcon, Sigma, ListChecks, Video as VideoIcon, Music, Upload, Bookmark as BookmarkIcon, FileText
@@ -92,22 +92,22 @@ function normalizeNotebookId(value: unknown): number | undefined {
   return undefined
 }
 
-const DiaryEditor = forwardRef<EditorRef, EditorProps>(({ 
-  onSave, 
-  onClose, 
-  notebooks, 
-  initialNotebookId, 
+const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
+  onSave,
+  onClose,
+  notebooks,
+  initialNotebookId,
   initialData,
   cacheToRestore,
   onCacheRestored
 }, ref) => {
   const { data: user } = useQuery({ queryKey: ['user', 'me'], queryFn: userApi.me })
   const isMobile = useIsMobile()
-  
+
   // 判断是编辑现有日记还是新建日记
   const isEditingExisting = !!initialData?.id
   const diaryId = initialData?.id
-  
+
   // 初始化状态 - 如果有缓存则使用缓存数据
   const [title, setTitle] = useState(() => {
     if (cacheToRestore) return cacheToRestore.title || ''
@@ -138,18 +138,18 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
     if (cacheToRestore) return cacheToRestore.tags || []
     return initialData?.tags || []
   })
-  
+
   const [activeModal, setActiveModal] = useState<'notebook' | 'mood' | 'location' | 'immich' | 'karakeep' | 'notion' | 'xhs' | 'bilibili' | 'tags' | 'weather' | 'unconfigured' | null>(null)
   const [unconfiguredType, setUnconfiguredType] = useState<'immich' | 'karakeep' | 'geo' | 'notion' | null>(null)
   const [realWordCount, setRealWordCount] = useState(0)
   const [uploading, setUploading] = useState<'video' | 'audio' | 'image' | null>(null)
   const [, forceUpdate] = useState(0)  // 用于强制更新编辑器状态
   const addToast = useToast(state => state.add)
-  
+
   const videoInputRef = useRef<HTMLInputElement>(null)
   const audioInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
-  
+
   // 用于追踪是否有未保存的更改
   const lastSavedDataRef = useRef<string>('')
   const initialDataRef = useRef<string>('')  // 记录进入编辑器时的原始数据
@@ -159,7 +159,7 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ 
+      StarterKit.configure({
         heading: { levels: [1, 2, 3] },
         dropcursor: { color: '#6ebeea', width: 2 },
       }),
@@ -171,8 +171,8 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
       NotionBlock,
       XhsPost,
       BilibiliVideo,
-      Underline, 
-      CharacterCount, 
+      Underline,
+      CharacterCount,
       Markdown,
       Link.configure({ openOnClick: false, HTMLAttributes: { class: 'text-[#6ebeea] underline underline-offset-4' } }),
       Placeholder.configure({ placeholder: "Tell your story..." }),
@@ -184,8 +184,8 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
     content: cacheToRestore?.content || initialData?.content || { type: 'doc', content: [{ type: 'paragraph' }] },
     onUpdate: ({ editor }) => setRealWordCount(countWordsCJK(editor.getText())),
     onTransaction: () => forceUpdate(v => v + 1),  // 格式变化时强制重新渲染
-    editorProps: { 
-      attributes: { class: cn('prose max-w-none focus:outline-none min-h-[600px] pb-40 leading-relaxed text-[#232f55]', isMobile ? 'text-base' : 'text-lg') } 
+    editorProps: {
+      attributes: { class: cn('prose editor-prose-safe max-w-none focus:outline-none min-h-[600px] leading-relaxed text-[#232f55]', isMobile ? 'text-base' : 'text-lg') }
     },
   })
 
@@ -205,14 +205,14 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
   // 保存缓存到localStorage
   const saveCacheNow = useCallback(() => {
     if (!editor || !selectedNotebookId) return
-    
+
     const data = getCurrentData()
     const dataString = JSON.stringify(data)
-    
+
     // 只有数据变化时才保存
     if (dataString !== lastSavedDataRef.current) {
       lastSavedDataRef.current = dataString
-      
+
       saveDiaryCache({
         cacheId: isEditingExisting ? `edit_${diaryId}` : 'new',
         diaryId: isEditingExisting ? diaryId : undefined,
@@ -266,7 +266,7 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
       setLocation(cacheToRestore.location)
       setWeather(cacheToRestore.weather)
       setTags(cacheToRestore.tags || [])
-      
+
       // 延迟设置editor内容，确保editor已初始化
       setTimeout(() => {
         if (editor && cacheToRestore.content) {
@@ -305,13 +305,13 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
   // 自动保存定时器
   useEffect(() => {
     if (!editor) return
-    
+
     autoSaveTimerRef.current = setInterval(() => {
       if (!isRestoringRef.current) {
         saveCacheNow()
       }
     }, AUTO_SAVE_INTERVAL)
-    
+
     return () => {
       if (autoSaveTimerRef.current) {
         clearInterval(autoSaveTimerRef.current)
@@ -378,11 +378,11 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
     }
     setActiveModal(modal)
   }
-  
+
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    
+
     setUploading('video')
     try {
       const result = await assetApi.uploadVideo(file)
@@ -395,11 +395,11 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
       if (videoInputRef.current) videoInputRef.current.value = ''
     }
   }
-  
+
   const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    
+
     setUploading('audio')
     try {
       const result = await assetApi.uploadAudio(file)
@@ -412,11 +412,11 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
       if (audioInputRef.current) audioInputRef.current.value = ''
     }
   }
-  
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    
+
     setUploading('image')
     try {
       const result = await assetApi.uploadCover(file)
@@ -434,15 +434,15 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
   const handleSave = () => {
     if (!title.trim()) return addToast('error', 'Title required')
     if (!selectedNotebookId) return addToast('error', 'Please select a notebook')
-    
+
     const data = getCurrentData()
-    onSave({ 
-      title: data.title, 
-      content: data.content, 
-      notebook_id: data.notebook_id, 
-      mood: data.mood, 
-      location: data.location, 
-      tags: data.tags, 
+    onSave({
+      title: data.title,
+      content: data.content,
+      notebook_id: data.notebook_id,
+      mood: data.mood,
+      location: data.location,
+      tags: data.tags,
       stats: { weather: data.weather },
       // 如果是编辑现有日记，保留原始创建时间
       date: isEditingExisting ? initialData?.date : undefined
@@ -452,45 +452,51 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
   }
 
   const mobileHeaderTop = 'var(--app-safe-top, 0px)'
-  const mobileToolbarTop = 'calc(var(--app-safe-top, 0px) + 4rem)'
-  const mobileContentTop = 'calc(var(--app-safe-top, 0px) + 7.5rem)'
+  const mobileToolbarTop = 'calc(var(--app-safe-top, 0px) + 4rem)'//'calc(var(--app-safe-top, 0px) + 4rem)'
+  const mobileContentTop = 'calc(var(--app-safe-top, 0px) + 7.5rem)'//'calc(var(--app-safe-top, 0px) + 7.5rem)'
+  const mobileContentBottom = 'var(--app-safe-bottom, 0px)'//'calc(var(--app-safe-bottom, 0px) + 5rem)'
+  const mobileContentInsetLeft = 'env(safe-area-inset-left, 0px)'//'max(env(safe-area-inset-left, 0px), 1.5rem)'
+  const mobileContentInsetRight = 'env(safe-area-inset-right, 0px)'//'max(env(safe-area-inset-right, 0px), 1.5rem)'
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="fixed inset-0 bg-[#f2f4f2] z-[200] flex flex-col overflow-hidden text-[#232f55] font-sans">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="fixed inset-0 bg-[#f2f4f2] z-[200] flex flex-col overflow-hidden text-[#232f55] font-sans"
+    >
       <header
-        className="h-16 md:h-20 border-b border-[#232f55]/5 px-4 md:px-8 flex items-center justify-between bg-white/80 backdrop-blur-md fixed top-0 left-0 right-0 z-[210] flex-shrink-0"
-        style={isMobile ? { top: mobileHeaderTop } : undefined}
+        className="border-b border-[#232f55]/5 bg-white/95 backdrop-blur-md fixed top-0 left-0 right-0 z-[210] flex-shrink-0"
       >
-        <div className="flex items-center gap-2 md:gap-4">
-          <button onClick={onClose} className="p-2 md:p-3 hover:bg-slate-50 rounded-2xl transition-colors text-slate-400"><ArrowLeft size={20} /></button>
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-[65vw]">
-            <HeaderButton icon={<Book size={14} className="text-[#6ebeea]"/>} label={currentNotebook?.name} onClick={() => setActiveModal('notebook')} />
-            <HeaderButton icon={mood ? <span className="text-lg">{mood.emoji}</span> : <Smile size={14}/>} label={mood ? mood.label : 'Mood'} onClick={() => setActiveModal('mood')} highlight={!!mood} />
-            <HeaderButton icon={<Sun size={14}/>} label={weather ? `${weather.weather}` : 'Weather'} onClick={() => handleServiceClick('geo', 'weather')} highlight={!!weather} />
-            
-            <HeaderButton icon={<MapPin size={14}/>} label={location ? location.name : 'Place'} onClick={() => handleServiceClick('geo', 'location')} highlight={!!location} />
-            <HeaderButton icon={<Tag size={14}/>} label={tags.length > 0 ? `${tags.length} Tags` : 'Tags'} onClick={() => setActiveModal('tags')} highlight={tags.length > 0} />
-            <HeaderButton icon={<ImageIcon size={14} className="text-[#6ebeea]"/>} label="Photos" onClick={() => handleServiceClick('immich', 'immich')} />
-            <HeaderButton icon={<BookmarkIcon size={14} className="text-pink-500"/>} label="Karakeep" onClick={() => handleServiceClick('karakeep', 'karakeep')} />
-            <HeaderButton icon={<span className="text-sm">📕</span>} label="小红书" onClick={() => setActiveModal('xhs')} />
-            <HeaderButton icon={<span className="text-sm">📺</span>} label="B站" onClick={() => setActiveModal('bilibili')} />
-            <HeaderButton icon={<FileText size={14} className="text-slate-600"/>} label="Notion" onClick={() => handleServiceClick('notion', 'notion')} />
-          </div>
-        </div>
+        {isMobile && <div style={{ height: 'var(--app-safe-top, 0px)' }} />}
+        <div className="h-16 md:h-20 px-4 md:px-8 flex items-center justify-between overflow-hidden">
+          <div className="flex items-center gap-2 md:gap-4">
+            <button onClick={onClose} className="p-2 md:p-3 hover:bg-slate-50 rounded-2xl transition-colors text-slate-400"><ArrowLeft size={20} /></button>
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-[65vw]">
+              <HeaderButton icon={<Book size={14} className="text-[#6ebeea]"/>} label={currentNotebook?.name} onClick={() => setActiveModal('notebook')} />
+              <HeaderButton icon={mood ? <span className="text-lg">{mood.emoji}</span> : <Smile size={14}/>} label={mood ? mood.label : 'Mood'} onClick={() => setActiveModal('mood')} highlight={!!mood} />
+              <HeaderButton icon={<Sun size={14}/>} label={weather ? `${weather.weather}` : 'Weather'} onClick={() => handleServiceClick('geo', 'weather')} highlight={!!weather} />
 
-        <div className="flex items-center gap-4 md:gap-8">
-          <div className="hidden md:flex flex-col items-end"><span className="text-[9px] font-black uppercase text-[#232f55]/30 tracking-widest">Words</span><motion.div key={realWordCount} initial={{ y: 3, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-base font-black text-[#6ebeea] tabular-nums">{realWordCount}</motion.div></div>
-          <button 
-            onClick={handleSave} 
-            className="px-6 md:px-10 py-2.5 md:py-4 bg-[#232f55] text-white rounded-[20px] md:rounded-[24px] font-black text-sm md:text-lg shadow-xl active:scale-95 transition-all flex items-center gap-2"
-          >
-            <Save size={18}/> <span className="hidden sm:inline">{initialData ? 'Update' : 'Publish'}</span>
-          </button>
+              <HeaderButton icon={<MapPin size={14}/>} label={location ? location.name : 'Place'} onClick={() => handleServiceClick('geo', 'location')} highlight={!!location} />
+              <HeaderButton icon={<Tag size={14}/>} label={tags.length > 0 ? `${tags.length} Tags` : 'Tags'} onClick={() => setActiveModal('tags')} highlight={tags.length > 0} />
+              <HeaderButton icon={<ImageIcon size={14} className="text-[#6ebeea]"/>} label="Photos" onClick={() => handleServiceClick('immich', 'immich')} />
+              <HeaderButton icon={<BookmarkIcon size={14} className="text-pink-500"/>} label="Karakeep" onClick={() => handleServiceClick('karakeep', 'karakeep')} />
+              <HeaderButton icon={<span className="text-sm">📕</span>} label="小红书" onClick={() => setActiveModal('xhs')} />
+              <HeaderButton icon={<span className="text-sm">📺</span>} label="B站" onClick={() => setActiveModal('bilibili')} />
+              <HeaderButton icon={<FileText size={14} className="text-slate-600"/>} label="Notion" onClick={() => handleServiceClick('notion', 'notion')} />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 md:gap-8">
+            <div className="hidden md:flex flex-col items-end"><span className="text-[9px] font-black uppercase text-[#232f55]/30 tracking-widest">Words</span><motion.div key={realWordCount} initial={{ y: 3, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-base font-black text-[#6ebeea] tabular-nums">{realWordCount}</motion.div></div>
+            <button
+              onClick={handleSave}
+              className="px-6 md:px-10 py-2.5 md:py-4 bg-[#232f55] text-white rounded-[20px] md:rounded-[24px] font-black text-sm md:text-lg shadow-xl active:scale-95 transition-all flex items-center gap-2"
+            >
+              <Save size={18}/> <span className="hidden sm:inline">{initialData ? 'Update' : 'Publish'}</span>
+            </button>
+          </div>
         </div>
       </header>
 
       <div
-        className="bg-white/40 border-b border-[#232f55]/5 px-4 md:px-8 py-2 flex items-center gap-1 overflow-x-auto no-scrollbar shadow-inner fixed top-16 md:top-20 left-0 right-0 z-[205] flex-shrink-0"
+        className="bg-white/85 border-b border-[#232f55]/5 px-4 md:px-8 py-2 flex items-center gap-1 overflow-x-auto no-scrollbar shadow-inner fixed top-16 md:top-20 left-0 right-0 z-[205] flex-shrink-0"
         style={isMobile ? { top: mobileToolbarTop } : undefined}
       >
         <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} icon={<Bold size={18} />} />
@@ -508,51 +514,59 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
         <ToolbarButton onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} icon={<TableIcon size={18} />} />
         <ToolbarButton onClick={() => editor.chain().focus().insertContent(' $\\alpha$ ').run()} icon={<Sigma size={18}/>} />
         <div className="w-px h-6 bg-[#232f55]/10 mx-1 md:mx-2" />
-        <ToolbarButton 
-          onClick={() => imageInputRef.current?.click()} 
-          icon={uploading === 'image' ? <div className="w-4 h-4 border-2 border-[#6ebeea]/30 border-t-[#6ebeea] rounded-full animate-spin" /> : <ImageIcon size={18} />} 
+        <ToolbarButton
+          onClick={() => imageInputRef.current?.click()}
+          icon={uploading === 'image' ? <div className="w-4 h-4 border-2 border-[#6ebeea]/30 border-t-[#6ebeea] rounded-full animate-spin" /> : <ImageIcon size={18} />}
           title="Upload Image"
         />
-        <ToolbarButton 
-          onClick={() => videoInputRef.current?.click()} 
-          icon={uploading === 'video' ? <div className="w-4 h-4 border-2 border-[#6ebeea]/30 border-t-[#6ebeea] rounded-full animate-spin" /> : <VideoIcon size={18} />} 
+        <ToolbarButton
+          onClick={() => videoInputRef.current?.click()}
+          icon={uploading === 'video' ? <div className="w-4 h-4 border-2 border-[#6ebeea]/30 border-t-[#6ebeea] rounded-full animate-spin" /> : <VideoIcon size={18} />}
           title="Upload Video"
         />
-        <ToolbarButton 
-          onClick={() => audioInputRef.current?.click()} 
-          icon={uploading === 'audio' ? <div className="w-4 h-4 border-2 border-[#6ebeea]/30 border-t-[#6ebeea] rounded-full animate-spin" /> : <Music size={18} />} 
+        <ToolbarButton
+          onClick={() => audioInputRef.current?.click()}
+          icon={uploading === 'audio' ? <div className="w-4 h-4 border-2 border-[#6ebeea]/30 border-t-[#6ebeea] rounded-full animate-spin" /> : <Music size={18} />}
           title="Upload Audio"
         />
-        
+
         {/* Hidden file inputs */}
-        <input 
-          ref={imageInputRef} 
-          type="file" 
-          accept="image/jpeg,image/png,image/webp,image/gif" 
-          className="hidden" 
-          onChange={handleImageUpload} 
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="hidden"
+          onChange={handleImageUpload}
         />
-        <input 
-          ref={videoInputRef} 
-          type="file" 
-          accept="video/mp4,video/webm,video/ogg,video/quicktime" 
-          className="hidden" 
-          onChange={handleVideoUpload} 
+        <input
+          ref={videoInputRef}
+          type="file"
+          accept="video/mp4,video/webm,video/ogg,video/quicktime"
+          className="hidden"
+          onChange={handleVideoUpload}
         />
-        <input 
-          ref={audioInputRef} 
-          type="file" 
-          accept="audio/mpeg,audio/wav,audio/ogg,audio/webm,audio/mp3,audio/aac" 
-          className="hidden" 
-          onChange={handleAudioUpload} 
+        <input
+          ref={audioInputRef}
+          type="file"
+          accept="audio/mpeg,audio/wav,audio/ogg,audio/webm,audio/mp3,audio/aac"
+          className="hidden"
+          onChange={handleAudioUpload}
         />
       </div>
 
       <div
-        className={cn("flex-1 overflow-y-auto pt-[120px] md:pt-[140px]", isMobile ? "px-4" : "md:px-0")}
-        style={isMobile ? { paddingTop: mobileContentTop } : undefined}
+        className={cn("flex-1 overflow-y-auto pt-[120px] md:pt-[140px]", !isMobile && "md:px-0")}
+        style={isMobile ? {
+          paddingTop: mobileContentTop,
+          paddingBottom: mobileContentBottom,
+          paddingLeft: mobileContentInsetLeft,
+          paddingRight: mobileContentInsetRight,
+        } : undefined}
       >
-        <div className="max-w-[840px] mx-auto pb-40 text-[#232f55]">
+        <div
+          className="max-w-[840px] mx-auto py-8 px-8 text-[#232f55]"
+          style={isMobile ? { ['--editor-safe-bottom-space' as string]: mobileContentBottom } : undefined}
+        >
            <input className={cn("w-full bg-transparent border-none outline-none font-black tracking-tighter placeholder:text-[#232f55]/10 text-[#232f55] mb-8 md:mb-12", isMobile ? "text-4xl" : "text-4xl md:text-7xl")} placeholder="Title..." value={title} onChange={e => setTitle(e.target.value)} />
            <div className="h-px bg-[#232f55]/5 w-20 md:w-40 mb-10 md:mb-16" />
            <EditorContent editor={editor} />
@@ -561,9 +575,9 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
 
       <AnimatePresence>
         {activeModal === 'unconfigured' && (
-          <ServiceSetupModal 
-            type={unconfiguredType as any} 
-            onClose={() => setActiveModal(null)} 
+          <ServiceSetupModal
+            type={unconfiguredType as any}
+            onClose={() => setActiveModal(null)}
           />
         )}
         {activeModal === 'notebook' && <NotebookPicker notebooks={notebooks} selectedId={selectedNotebookId} onSelect={(id:number) => { setSelectedNotebookId(id); setActiveModal(null); }} onClose={() => setActiveModal(null)} />}
@@ -572,7 +586,7 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
         {activeModal === 'tags' && <TagPicker selectedTags={tags} onUpdate={setTags} onClose={() => setActiveModal(null)} />}
         {activeModal === 'weather' && <WeatherModal currentData={weather} onSelect={(w:any) => { setWeather(w); setActiveModal(null); }} onClose={() => setActiveModal(null)} />}
         {activeModal === 'immich' && (
-          <ImmichPicker 
+          <ImmichPicker
             onSelect={async (assetId:string, sig: string, mode:any) => {
               try {
                 const result = await immichApi.importAsset(assetId, mode)
@@ -580,14 +594,14 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
                   const storedUrl = localStorage.getItem('server_url')
                   return storedUrl ? `${storedUrl.replace(/\/$/, '')}/api` : '/api'
                 })()
-                
+
                 // link模式使用签名URL，copy模式使用返回的URL
-                const finalUrl = mode === 'link' 
-                  ? (result.mediaType === 'video' 
-                      ? `${baseUrl}/proxy/immich/video/${assetId}?sig=${result.signature}` 
+                const finalUrl = mode === 'link'
+                  ? (result.mediaType === 'video'
+                      ? `${baseUrl}/proxy/immich/video/${assetId}?sig=${result.signature}`
                       : `${baseUrl}/proxy/immich/original/${assetId}?sig=${result.signature}`)
                   : result.url
-                
+
                 // 根据媒体类型插入不同的元素
                 if (result.mediaType === 'video') {
                   editor.chain().focus().setVideo({ src: finalUrl }).run()
@@ -596,12 +610,12 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
                 }
                 setActiveModal(null)
               } catch(e) { alert('Failed') }
-            }} 
-            onClose={() => setActiveModal(null)} 
+            }}
+            onClose={() => setActiveModal(null)}
           />
         )}
         {activeModal === 'karakeep' && (
-          <KarakeepPicker 
+          <KarakeepPicker
             onSelect={(bookmark: any) => {
               editor.chain().focus().insertContent({
                 type: 'bookmark',
@@ -614,7 +628,7 @@ const DiaryEditor = forwardRef<EditorRef, EditorProps>(({
               }).run()
               setActiveModal(null)
             }}
-            onClose={() => setActiveModal(null)} 
+            onClose={() => setActiveModal(null)}
           />
         )}
         {activeModal === 'notion' && (

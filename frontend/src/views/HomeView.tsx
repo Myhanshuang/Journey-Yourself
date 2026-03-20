@@ -1,14 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import { useOutletContext } from 'react-router-dom'
-import { diaryApi, userApi } from '../lib/api'
+import { userApi } from '../lib/api'
 import { DiaryItemCard, useAdjustedTime } from '../components/ui/JourneyUI'
 import { Sparkles } from 'lucide-react'
 import { useJourneyNavigation } from '../hooks/useJourneyNavigation'
 import { motion } from 'framer-motion'
+import { appQueryApi, type EntryCard } from '../shared/api/appQuery'
 
 interface OutletContextType {
-  notebooks: any[]
-  setNotebookModal: (config: { show: boolean; data?: any; afterCreate?: () => void }) => void
+  notebooks: Array<{ id: number; name: string }>
+  setNotebookModal: (config: { show: boolean; data?: unknown; afterCreate?: () => void }) => void
   handleWriteClick: () => void
   restorePosition: (pos?: number) => void
 }
@@ -19,9 +20,10 @@ export default function HomeView() {
   const { getAdjusted } = useAdjustedTime()
 
   const { data: user } = useQuery({ queryKey: ['user', 'me'], queryFn: userApi.me })
-  const { data: pinned = [] } = useQuery({ queryKey: ['diaries', 'pinned'], queryFn: diaryApi.pinned })
-  const { data: recent = [] } = useQuery({ queryKey: ['diaries', 'recent'], queryFn: () => diaryApi.recent() })
-  const { data: lastYear = [] } = useQuery({ queryKey: ['diaries', 'lastYear'], queryFn: diaryApi.lastYearToday })
+  const { data: homeData } = useQuery({ queryKey: ['app', 'home'], queryFn: appQueryApi.home })
+  const pinned = homeData?.pinned || []
+  const recent = homeData?.recent || []
+  const lastYear = homeData?.on_this_day || []
 
   const Greeting = () => {
     const now = getAdjusted(new Date().toISOString())
@@ -31,7 +33,7 @@ export default function HomeView() {
     return 'Evening'
   }
 
-  const handleDiaryClick = (diary: any) => {
+  const handleDiaryClick = (diary: EntryCard) => {
     toDiary(diary.id)
   }
 
@@ -63,7 +65,7 @@ export default function HomeView() {
             <div className="h-[1px] flex-1 bg-[#232f55]/5" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-            {pinned.map((d: any) => (
+            {pinned.map((d) => (
               <DiaryItemCard
                 key={d.id}
                 diary={d}
@@ -81,7 +83,7 @@ export default function HomeView() {
         <section className="space-y-6 md:space-y-8 px-2">
           <h3 className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-[#232f55]/30 ml-2 md:ml-4">On this day last year</h3>
           <div className="grid grid-cols-1 gap-6 md:gap-10">
-            {lastYear.map((d: any) => <DiaryItemCard key={d.id} diary={d} size="lg" onClick={() => handleDiaryClick(d)} />)}
+            {lastYear.map((d) => <DiaryItemCard key={d.id} diary={d} size="lg" onClick={() => handleDiaryClick(d)} />)}
           </div>
         </section>
       )}
@@ -90,7 +92,7 @@ export default function HomeView() {
       <section className="space-y-6 md:space-y-8 px-2">
         <h3 className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-[#232f55]/30 ml-2 md:ml-4">Recent Chronicles</h3>
         <div className="columns-1 md:columns-2 gap-6 md:gap-8 space-y-6 md:space-y-8">
-          {recent.map((d: any, idx: number) => (
+          {recent.map((d, idx: number) => (
             <div key={d.id} className="break-inside-avoid">
               <DiaryItemCard
                 diary={d}

@@ -14,7 +14,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { diaryApi, notebookApi } from '../lib/api'
 import { useToast } from '../components/ui/JourneyUI'
 import Editor from '../components/Editor'
-import type { EditorRef } from '../components/Editor'
+import type { EditorData, EditorRef } from '../components/Editor'
 import { CacheRecoveryModal, ExitConfirmModal } from '../components/modals/CacheRecoveryModal'
 import { 
   getEditDiaryCache, 
@@ -23,6 +23,7 @@ import {
 } from '../lib/cache'
 import type { DiaryCache } from '../lib/cache'
 import { useJourneyNavigation } from '../hooks/useJourneyNavigation'
+import { appQueryApi } from '../shared/api/appQuery'
 
 export default function EditView() {
   const { id } = useParams<{ id: string }>()
@@ -48,15 +49,15 @@ export default function EditView() {
   
   // 加载日记数据
   const { data: diary, isLoading, error } = useQuery({
-    queryKey: ['diary', diaryId],
-    queryFn: () => diaryApi.get(diaryId),
+    queryKey: ['app', 'entry', diaryId],
+    queryFn: () => appQueryApi.entryDetail(diaryId),
     enabled: !!diaryId,
   })
   
   // 更新日记 mutation
   const saveMutation = useMutation({
-    mutationFn: (data: any) => diaryApi.update(diaryId, data),
-    onSuccess: (updatedDiary) => {
+    mutationFn: (data: EditorData) => diaryApi.update(diaryId, data),
+    onSuccess: () => {
       queryClient.invalidateQueries()
       // 清除编辑缓存
       clearEditDiaryCache(diaryId)
@@ -114,7 +115,7 @@ export default function EditView() {
       setPendingCache(null)
       setEditorReady(true)
       addToast('success', 'Draft saved')
-    } catch (error) {
+    } catch {
       addToast('error', 'Failed to save draft')
     } finally {
       setIsSavingDraft(false)
@@ -175,7 +176,7 @@ export default function EditView() {
       setShowExitConfirm(false)
       back()
       addToast('success', 'Draft saved')
-    } catch (error) {
+    } catch {
       addToast('error', 'Failed to save draft')
     } finally {
       setIsSavingDraft(false)
@@ -188,7 +189,7 @@ export default function EditView() {
   }, [])
   
   // 处理保存
-  const handleSave = useCallback((data: any) => {
+  const handleSave = useCallback((data: EditorData) => {
     saveMutation.mutate(data)
   }, [saveMutation])
   

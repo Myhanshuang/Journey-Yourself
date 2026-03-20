@@ -66,6 +66,7 @@ class DiaryCreate(DiaryBase):
 
 class DiaryRead(DiaryBase):
     id: int
+    cover_image_url: Optional[str] = None
     word_count: int
     image_count: int
     is_favorite: bool
